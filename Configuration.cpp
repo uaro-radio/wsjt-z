@@ -202,6 +202,7 @@
 #include "logbook/logbook.h"
 #include "widgets/LazyFillComboBox.hpp"
 #include "Network/FileDownload.hpp"
+#include "UaHam/SettingsTabs.hpp"
 
 #include "ui_Configuration.h"
 #include "moc_Configuration.cpp"
@@ -710,6 +711,16 @@ private:
   bool highlight_73_;
   int LotW_days_since_upload_;
 
+  // UaHamAward. The two tabs are built in code and owned by the tab widget;
+  // these hold what they had when the dialog was last accepted, which is what
+  // the rest of the application reads.
+  UaHam::FilterSettingsWidget * uaham_filter_tab_;
+  UaHam::SiteSettingsWidget * uaham_site_tab_;
+  UaHam::CountryFilter::Mode country_filter_mode_;
+  QStringList country_filter_entities_;
+  bool uaham_site_enabled_;
+  quint16 uaham_site_port_;
+
   TransceiverFactory::ParameterPack rig_params_;
   TransceiverFactory::ParameterPack saved_rig_params_;
   TransceiverFactory::Capabilities::PortType last_port_type_;
@@ -966,6 +977,20 @@ QStringListModel const * Configuration::macros () const {return &m_->macros_;}
 QDir Configuration::save_directory () const {return m_->save_directory_;}
 QDir Configuration::azel_directory () const {return m_->azel_directory_;}
 QString Configuration::rig_name () const {return m_->rig_params_.rig_name;}
+
+// UaHamAward
+void Configuration::set_country_entities (QList<AD1CCty::Entity> const& entities)
+{
+  m_->uaham_filter_tab_->set_entities (entities);
+}
+UaHam::CountryFilter::Mode Configuration::country_filter_mode () const {return m_->country_filter_mode_;}
+QStringList Configuration::country_filter_entities () const {return m_->country_filter_entities_;}
+bool Configuration::uaham_site_enabled () const {return m_->uaham_site_enabled_;}
+quint16 Configuration::uaham_site_port () const {return m_->uaham_site_port_;}
+void Configuration::show_uaham_site_status (QString const& text)
+{
+  m_->uaham_site_tab_->show_status (text);
+}
 bool Configuration::pwrBandTxMemory () const {return m_->pwrBandTxMemory_;}
 bool Configuration::pwrBandTuneMemory () const {return m_->pwrBandTuneMemory_;}
 LotWUsers const& Configuration::lotw_users () const {return m_->lotw_users_;}
@@ -1427,6 +1452,14 @@ Configuration::impl::impl (Configuration * self, QNetworkAccessManager * network
 {
   ui_->setupUi (this);
 
+  // UaHamAward tabs, added here rather than to Configuration.ui: that file is
+  // generated XML which upstream edits in most releases, so a tab written into
+  // it is a merge conflict in every future version of WSJT-Z.
+  uaham_filter_tab_ = new UaHam::FilterSettingsWidget {this};
+  uaham_site_tab_ = new UaHam::SiteSettingsWidget {this};
+  ui_->configuration_tabs->addTab (uaham_filter_tab_, tr ("UaHam F&ilter"));
+  ui_->configuration_tabs->addTab (uaham_site_tab_, tr ("UaHam &Site"));
+
   {
     // Make sure the default save directory exists
     QString save_dir {"save"};
@@ -1850,6 +1883,15 @@ void Configuration::impl::initialize_models ()
   ui_->only_fields_check_box->setChecked (highlight_only_fields_);
   ui_->include_WAE_check_box->setChecked (include_WAE_entities_);
   ui_->highlight_73_check_box->setChecked (highlight_73_);
+
+  // UaHamAward. The ticks are restored before the country list is known, and
+  // again by set_entities () once the main window hands cty.dat over — which
+  // is why the widget keeps the chosen prefixes rather than reading them back
+  // off its own rows.
+  uaham_filter_tab_->set_mode (country_filter_mode_);
+  uaham_filter_tab_->set_selected_entities (country_filter_entities_);
+  uaham_site_tab_->set_enabled (uaham_site_enabled_);
+  uaham_site_tab_->set_port (uaham_site_port_);
   ui_->LotW_days_since_upload_spin_box->setValue (LotW_days_since_upload_);
   ui_->cbHighlightDXcall->setChecked(highlight_DXcall_);
   ui_->cbHighlightDXgrid->setChecked(highlight_DXgrid_);
@@ -2055,6 +2097,16 @@ void Configuration::impl::read_settings ()
   highlight_only_fields_ = settings_->value("OnlyFieldsSought", false).toBool ();
   include_WAE_entities_ = settings_->value("IncludeWAEEntities", false).toBool ();
   highlight_73_ = settings_->value("Highlight73", false).toBool ();
+
+  // UaHamAward. The mode is stored as its number and read back through
+  // mode_from_int, so a value written by a later release — or a hand-edited
+  // one — leaves the filter off rather than hiding a band for reasons the
+  // operator cannot see.
+  country_filter_mode_ = UaHam::CountryFilter::mode_from_int (
+      settings_->value ("UaHamCountryFilterMode", UaHam::CountryFilter::Off).toInt ());
+  country_filter_entities_ = settings_->value ("UaHamCountryFilterEntities", QStringList {}).toStringList ();
+  uaham_site_enabled_ = settings_->value ("UaHamSiteEnabled", false).toBool ();
+  uaham_site_port_ = static_cast<quint16> (settings_->value ("UaHamSitePort", 8080).toUInt ());
   LotW_days_since_upload_ = settings_->value ("LotWDaysSinceLastUpload", 365).toInt ();
   lotw_users_.set_age_constraint (LotW_days_since_upload_);
 
@@ -2272,6 +2324,12 @@ void Configuration::impl::write_settings ()
   settings_->setValue ("OnlyFieldsSought", highlight_only_fields_);
   settings_->setValue ("IncludeWAEEntities", include_WAE_entities_);
   settings_->setValue ("Highlight73", highlight_73_);
+
+  // UaHamAward
+  settings_->setValue ("UaHamCountryFilterMode", static_cast<int> (country_filter_mode_));
+  settings_->setValue ("UaHamCountryFilterEntities", country_filter_entities_);
+  settings_->setValue ("UaHamSiteEnabled", uaham_site_enabled_);
+  settings_->setValue ("UaHamSitePort", uaham_site_port_);
   settings_->setValue ("LotWDaysSinceLastUpload", LotW_days_since_upload_);
   settings_->setValue ("toRTTY", log_as_RTTY_);
   settings_->setValue ("dBtoComments", report_in_comments_);
@@ -2906,6 +2964,12 @@ void Configuration::impl::accept ()
   highlight_only_fields_ = ui_->only_fields_check_box->isChecked ();
   include_WAE_entities_ = ui_->include_WAE_check_box->isChecked ();
   highlight_73_ = ui_->highlight_73_check_box->isChecked ();
+
+  // UaHamAward
+  country_filter_mode_ = uaham_filter_tab_->mode ();
+  country_filter_entities_ = uaham_filter_tab_->selected_entities ();
+  uaham_site_enabled_ = uaham_site_tab_->enabled ();
+  uaham_site_port_ = uaham_site_tab_->port ();
   LotW_days_since_upload_ = ui_->LotW_days_since_upload_spin_box->value ();
   lotw_users_.set_age_constraint (LotW_days_since_upload_);
 

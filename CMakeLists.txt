@@ -60,6 +60,22 @@ endif ()
 include (set_build_type)
 # RC 0 or omitted is a development build, GA is a General Availability release build
 set_build_type (GA)
+
+# UaHamAward fork marker.
+#
+# GPLv3 §5(a) asks a modified version to carry prominent notice that it was
+# changed. There is a practical reason beyond the licence: a build this fork
+# made must never be mistaken for one the WSJT-Z project published, or its bug
+# reports go to people who cannot reproduce them.
+#
+# Appended to whatever the release channel produced, so this tree's GA build
+# reads 3.0.0-uaham1. Setting it empty produces an unmarked build, which is
+# only ever right when the changes here have gone upstream.
+set (WSJT_FORK_TAG "uaham1" CACHE STRING "Fork marker appended to the version string; empty for none.")
+if (WSJT_FORK_TAG)
+  set (BUILD_TYPE_REVISION "${BUILD_TYPE_REVISION}-${WSJT_FORK_TAG}")
+endif ()
+
 set (wsjtx_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}${BUILD_TYPE_REVISION}")
 
 #
@@ -251,6 +267,12 @@ set (wsjt_qt_CXXSRCS
   logbook/AD1CCty.cpp
   logbook/WorkedBefore.cpp
   logbook/Multiplier.cpp
+  # UaHamAward integration, kept in a directory of its own so that merging a
+  # new release of WSJT-Z touches as little of it as possible.
+  UaHam/QsoPayload.cpp
+  UaHam/SettingsTabs.cpp
+  UaHam/SiteServer.cpp
+  UaHam/StatusWidget.cpp
   Network/NetworkAccessManager.cpp
   widgets/LazyFillComboBox.cpp
   widgets/CheckableItemComboBox.cpp

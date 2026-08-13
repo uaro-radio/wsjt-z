@@ -43,6 +43,9 @@
 #include "Network/PSKReporter.hpp"
 #include "UDPExamples/MessageServer.hpp"
 #include "logbook/logbook.h"
+#include "UaHam/CountryFilter.hpp"
+#include "UaHam/SiteServer.hpp"
+#include "UaHam/StatusWidget.hpp"
 #include "astro.h"
 #include "MessageBox.hpp"
 #include "Network/NetworkAccessManager.hpp"
@@ -387,6 +390,12 @@ private slots:
      void on_cbAutoCall_toggled(bool b);
      void on_cbAutoCQ_toggled(bool b);
      bool callsignFiltered(DecodedText dt);
+
+     // UaHamAward
+     void uahamApplySettings ();
+     void uahamUpdateStatus ();
+     bool uahamHiddenByCountry (DecodedText const&);
+     void uahamPublishQso (QByteArray const& ADIF);
      // FT8 thread count selectors (Decode > Parameters > Number of threads)
      void on_actionMTAuto_triggered();
      void on_actionMT1_triggered();
@@ -838,6 +847,22 @@ private:
   QLabel mode_switch_status_label;
   QProgressBar progressBar;
   QLabel watchdog_label;
+
+  // UaHamAward. Two indicators in the status bar, so that "the filter is on"
+  // and "the site is connected" are answerable at a glance rather than by
+  // opening a dialog.
+  QLabel uaham_filter_label;
+  QLabel uaham_site_label;
+  UaHam::CountryFilter m_uahamFilter;
+  QScopedPointer<UaHam::SiteServer> m_uahamSite;
+  // Owned by the tab widget it is added to, not by this pointer.
+  UaHam::StatusWidget * m_uahamStatus {nullptr};
+  // What the settings asked for, which is not always what the server got: a
+  // busy port makes it step to the next free one. Comparing against the
+  // request is what stops every visit to the settings dialog from rebinding a
+  // server that is working perfectly well.
+  quint16 m_uahamRequestedPort {0};
+  unsigned m_uahamQsosSent {0};
 
   QFuture<void> m_wav_future;
   QFutureWatcher<void> m_wav_future_watcher;

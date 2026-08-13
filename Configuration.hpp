@@ -10,6 +10,8 @@
 #include "Audio/AudioDevice.hpp"
 #include "Transceiver/Transceiver.hpp"
 #include "otpgenerator.h"
+#include "logbook/AD1CCty.hpp"
+#include "UaHam/CountryFilter.hpp"
 
 #include "pimpl_h.hpp"
 
@@ -194,6 +196,18 @@ public:
   bool highlight_only_fields () const;
   bool include_WAE_entities () const;
   bool highlight_73 () const;
+
+  // UaHamAward. The country list is not Configuration's to load — cty.dat is
+  // read once into the log book — so the main window hands it over before the
+  // dialog is shown, which also means a cty.dat replaced while the program is
+  // running needs no restart.
+  void set_country_entities (QList<AD1CCty::Entity> const&);
+  UaHam::CountryFilter::Mode country_filter_mode () const;
+  QStringList country_filter_entities () const;
+  bool uaham_site_enabled () const;
+  quint16 uaham_site_port () const;
+  void show_uaham_site_status (QString const&);
+
   void setSpecial_Q65_Pileup();
   void setSpecial_Hound();
   void setSpecial_Fox();

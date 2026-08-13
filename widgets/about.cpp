@@ -31,6 +31,20 @@ CAboutDlg::CAboutDlg(QWidget *parent) :
     " W4TV, and W9MDB.<br /><br />"
     "WSJT-X is licensed under the terms of Version 3 <br />"
     "of the GNU General Public License (GPL) <br /><br />"
+
+    // GPLv3 §5(a): a modified version has to say that it was modified, and by
+    // whom. It is also the honest thing to put in front of anyone about to
+    // report a bug — the country filter and the uahamaward.com connection are
+    // neither the WSJT-X team's work nor the WSJT-Z project's, and should not
+    // become their correspondence.
+    "<b>Modified build.</b> This is not an official WSJT-Z release.<br />"
+    "It adds a DXCC country filter for the decode windows and a<br />"
+    "direct connection to uahamaward.com for logged contacts.<br />"
+    "Report problems with those to the fork, not to the WSJT-Z<br />"
+    "or WSJT-X teams:<br />"
+    "<a href=\"https://github.com/uaro-radio/wsjt-z\">"
+    "https://github.com/uaro-radio/wsjt-z</a><br /><br />"
+
     "<a href=" TO_STRING__ (PROJECT_HOMEPAGE) ">"
     "<img src=\":/icon_128x128.png\" /></a>"
     "<a href=\"https://www.gnu.org/licenses/gpl-3.0.txt\">"

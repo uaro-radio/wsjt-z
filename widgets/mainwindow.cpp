@@ -110,6 +110,7 @@
 #include "QSYMessage.h"
 #include "QSYMessageCreator.h"
 #include "qsymonitor.h"
+#include "UaHam/QsoPayload.hpp"
 #include "ui_mainwindow.h"
 #include "moc_mainwindow.cpp"
 #include "Logger.hpp"
@@ -1415,6 +1416,25 @@ MainWindow::MainWindow(QDir const& temp_directory, bool multiple,
   }
 #endif
 
+  // UaHamAward. The version reported to the site is the application's own,
+  // which already carries the fork marker from WSJT_FORK_TAG — one source of
+  // truth, so the string the site displays cannot drift from the one in the
+  // title bar.
+  m_uahamSite.reset (new UaHam::SiteServer {version (), this});
+  connect (m_uahamSite.data (), &UaHam::SiteServer::clients_changed
+           , this, [this] (int) {uahamUpdateStatus ();});
+
+  m_uahamStatus = new UaHam::StatusWidget {this};
+  ui->tabWidget->addTab (m_uahamStatus, tr ("UaHam"));
+  connect (m_uahamStatus, &UaHam::StatusWidget::counters_reset, this, [this]
+           {
+             m_uahamFilter.reset_hidden_count ();
+             m_uahamQsosSent = 0;
+             uahamUpdateStatus ();
+           });
+
+  uahamApplySettings ();
+
 // this must be the last statement of constructor
   if (!m_valid) throw std::runtime_error {"Fatal initialization exception"};
 }
@@ -2693,7 +2713,13 @@ void MainWindow::on_actionSettings_triggered()               //Setup Dialog
   SpecOp nContest0=m_specOp;
   auto psk_on = m_config.spot_to_psk_reporter ();
   inSettings = true;
+  // UaHamAward: the country picker is filled from the log book's cty.dat,
+  // which lives here and not in the settings dialog. Handing it over on every
+  // visit also means a cty.dat replaced while the program runs needs no
+  // restart.
+  m_config.set_country_entities (m_logBook.countries ()->entities ());
   if (QDialog::Accepted == m_config.exec ()) {
+    uahamApplySettings ();
     checkMSK144ContestType();
     if (m_config.my_callsign () != callsign) {
       m_baseCall = Radio::base_callsign (m_config.my_callsign ());
@@ -3514,6 +3540,19 @@ void MainWindow::createStatusBar()                           //createStatusBar
   ndecodes_label.setMinimumSize (QSize {30, 18});
   ndecodes_label.setFrameStyle (QFrame::Panel | QFrame::Sunken);
   statusBar()->addWidget (&ndecodes_label);
+
+  // UaHamAward. Both indicators hide themselves when the feature behind them
+  // is off, so an operator who uses neither sees the status bar they always
+  // saw.
+  uaham_filter_label.setAlignment (Qt::AlignHCenter);
+  uaham_filter_label.setFrameStyle (QFrame::Panel | QFrame::Sunken);
+  uaham_filter_label.setVisible (false);
+  statusBar()->addWidget (&uaham_filter_label);
+
+  uaham_site_label.setAlignment (Qt::AlignHCenter);
+  uaham_site_label.setFrameStyle (QFrame::Panel | QFrame::Sunken);
+  uaham_site_label.setVisible (false);
+  statusBar()->addWidget (&uaham_site_label);
 
   // Z
   labDate.setAlignment (Qt::AlignHCenter);
@@ -5475,6 +5514,13 @@ void MainWindow::readFromStdout()                             //readFromStdout
   }
 
   for (auto line_read : lines_to_process) {
+    // Reset per decode, not per batch. Cleared once at the top of
+    // readFromStdout, this flag stayed set for every later decode in the same
+    // batch once anything set it — hiding them all and suppressing
+    // auto-sequencing for the rest of the period. Its per-decode neighbours
+    // inside this loop were always cleared here.
+    filtered = false;
+
     if (m_mode == "FT8" and m_specOp == SpecOp::FOX and m_ActiveStationsWidget != NULL) { // see if we should add this to ActiveStations window
       QString the_line = QString(line_read);
       if (!m_ActiveStationsWidget->wantedOnly() ||
@@ -5631,6 +5677,24 @@ void MainWindow::readFromStdout()                             //readFromStdout
       }
       // Z
       auto isFiltered = callsignFiltered(decodedtext0);
+
+      // UaHamAward country filter, kept as a flag of its own rather than
+      // folded into callsignFiltered(). WSJT-Z's filtering is deliberately
+      // overridable — a message addressed to us passes it (see `for_us`
+      // below), and the Rx Frequency window is not gated by it at all. The
+      // country filter is meant to be absolute, so it needs to survive both.
+      //
+      // Feeding isFiltered as well is what gets it the rest of WSJT-Z's
+      // machinery for free: the Band Activity gate, auto-sequencing, Auto CQ,
+      // and — only if the operator asked for it with "UDP filtering" — the
+      // feed other programs read.
+      bool const uahamHidden {uahamHiddenByCountry (decodedtext0)};
+      if (uahamHidden)
+        {
+          isFiltered = true;
+          uahamUpdateStatus ();
+        }
+
       addSlot(decodedtext.frequencyOffset());
 
       auto for_us  = decodedtext.string().contains(" " + my_call + " ") or
@@ -5759,7 +5823,11 @@ void MainWindow::readFromStdout()                             //readFromStdout
               ui->labDXped->setStyleSheet("QLabel {background-color: red; color: white;}");
             if (!filtered) {
 
-          if (!isFiltered || for_us)
+          // `for_us` deliberately lets a station calling us through WSJT-Z's
+          // own filters. The country filter does not grant that exemption:
+          // being called directly by a country the operator asked to hide is
+          // precisely the case they asked about.
+          if ((!isFiltered || for_us) && !uahamHidden)
           {
 
               QString distance;
@@ -5985,7 +6053,10 @@ void MainWindow::readFromStdout()                             //readFromStdout
       if((m_mode=="JT4" or m_mode=="Q65" or m_mode=="JT65") and decodedtext.string().contains(m_baseCall) && ui->actionInclude_averaging->isVisible() && !ui->actionInclude_averaging->isChecked()) bDisplayRight=true;
       if((m_mode=="FT8" or m_mode=="FT4" or m_mode=="FT2") and SpecOp::FOX!=m_specOp && decodedtext0.string().replace("<","").replace(">","").contains(m_baseCall + " " + m_hisCall)) bDisplayRight=true;  // really all messages for us
 
-      if (bDisplayRight) {
+      // The Rx Frequency window takes isFiltered only as a hint for colouring,
+      // never as a gate — which is why a filtered station still appears here
+      // the moment it calls you. The country filter gates it.
+      if (bDisplayRight && !uahamHidden) {
         // This msg is within 10 hertz of our tuned frequency, or a JT4 or JT65 avg,
         // or contains MyCall
         if(!m_bBestSPArmed or (m_mode!="FT4" and m_mode!="FT2")) {
@@ -9185,6 +9256,11 @@ void MainWindow::acceptQSO (QDateTime const& QSO_date_off, QString const& call, 
                                , exchange_sent, exchange_rcvd, propmode);
   m_messageClient->logged_ADIF (ADIF);
 
+  // UaHamAward. Every logged contact passes through here, whether the operator
+  // pressed Log QSO or auto-sequencing did it for them, and the ADIF is
+  // already built — so this is the one place the site has to be told about.
+  uahamPublishQso (ADIF);
+
   // Z
   updateQsoCounter(true);
   clearDX();
@@ -11673,6 +11749,127 @@ void MainWindow::replayDecodes ()
       }
   }
   statusChanged ();
+}
+
+//
+// UaHamAward: put the settings into effect.
+//
+// Called at startup and whenever the settings dialog is accepted, so that
+// turning the filter on or changing the port takes effect without a restart.
+//
+void MainWindow::uahamApplySettings ()
+{
+  m_uahamFilter.configure (m_config.country_filter_mode (), m_config.country_filter_entities ());
+
+  if (m_config.uaham_site_enabled ())
+    {
+      auto const wanted = m_config.uaham_site_port ();
+      // Only rebind when the request changed. The running server may well be
+      // on a different port than the one asked for — it steps past a busy one
+      // — and restarting it on every visit to the settings dialog would drop
+      // the browser's connection for no reason.
+      if (!m_uahamSite->listening () || wanted != m_uahamRequestedPort)
+        {
+          m_uahamRequestedPort = wanted;
+          if (!m_uahamSite->start (wanted))
+            {
+              m_config.show_uaham_site_status (
+                  tr ("Could not listen on port %1: %2").arg (wanted).arg (m_uahamSite->error_string ()));
+            }
+        }
+    }
+  else
+    {
+      m_uahamSite->stop ();
+      m_uahamRequestedPort = 0;
+    }
+
+  uahamUpdateStatus ();
+}
+
+//
+// UaHamAward: what the status indicators say.
+//
+void MainWindow::uahamUpdateStatus ()
+{
+  QString filter_mode;
+  switch (m_uahamFilter.mode ())
+    {
+    case UaHam::CountryFilter::Block: filter_mode = tr ("blocking"); break;
+    case UaHam::CountryFilter::Only: filter_mode = tr ("showing only"); break;
+    default: filter_mode = tr ("off"); break;
+    }
+
+  uaham_filter_label.setVisible (m_uahamFilter.active ());
+  uaham_filter_label.setText (tr ("Filter: %1 %2 (%3 hidden)")
+                              .arg (filter_mode)
+                              .arg (m_uahamFilter.size ())
+                              .arg (m_uahamFilter.hidden_count ()));
+
+  QString site_state;
+  if (!m_uahamSite->listening ())
+    {
+      site_state = tr ("off");
+      uaham_site_label.setVisible (false);
+    }
+  else
+    {
+      uaham_site_label.setVisible (true);
+      // The connection matters more than the port: an operator whose contacts
+      // are not arriving needs to know whether the browser is there at all,
+      // and that is the half they can do something about.
+      site_state = m_uahamSite->client_count ()
+        ? tr ("connected on port %1").arg (m_uahamSite->port ())
+        : tr ("waiting for a browser on port %1").arg (m_uahamSite->port ());
+      uaham_site_label.setText (m_uahamSite->client_count ()
+                                ? tr ("UaHam: connected, %1 sent").arg (m_uahamQsosSent)
+                                : tr ("UaHam: waiting on %1").arg (m_uahamSite->port ()));
+    }
+
+  if (m_uahamStatus)
+    {
+      m_uahamStatus->show_filter (filter_mode, m_uahamFilter.size (), m_uahamFilter.hidden_count ());
+      m_uahamStatus->show_site (site_state, m_uahamQsosSent);
+    }
+}
+
+//
+// UaHamAward: is this decode from a country the operator asked not to see?
+//
+// The sender is word 2 of a standard message, which is the station calling
+// CQ, answering somebody or reporting to us — in every case the one whose
+// country is being asked about.
+//
+bool MainWindow::uahamHiddenByCountry (DecodedText const& decodedtext)
+{
+  if (!m_uahamFilter.active ()) return false;
+
+  QString deCall;
+  QString deGrid;
+  decodedtext.deCallAndGrid (/*out*/ deCall, deGrid);
+  auto const& looked_up = m_logBook.countries ()->lookup (deCall);
+  if (!m_uahamFilter.hides (looked_up.primary_prefix)) return false;
+
+  m_uahamFilter.note_hidden ();
+  return true;
+}
+
+//
+// UaHamAward: hand a logged contact to whatever browser is watching.
+//
+// Deliberately unable to fail in any way the operator has to care about: with
+// nobody connected this does nothing at all, and logging has already happened
+// by the time it is called.
+//
+void MainWindow::uahamPublishQso (QByteArray const& ADIF)
+{
+  if (!m_config.uaham_site_enabled () || !m_uahamSite->listening ()) return;
+
+  if (m_uahamSite->publish_qso (UaHam::qso_payload_from_adif (ADIF)))
+    {
+      ++m_uahamQsosSent;
+      uahamUpdateStatus ();
+    }
 }
 
 void MainWindow::postDecode (bool is_new, QString const& message)
