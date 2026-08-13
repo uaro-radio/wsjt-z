@@ -252,7 +252,13 @@ int OmniRigTransceiver::do_start ()
         {
           throw_qstring (tr ("OmniRig: don't know how to set rig frequency"));
         }
-      switch (rig_->GetRxFrequency () - test_frequency)
+      // Explicitly signed: the cases below are small negative deltas, and
+      // whether this expression is signed depends on the return type of the
+      // OmniRig binding dumpcpp generates — which differs between the type
+      // library WSJT-X points at and the COM class registered here. Unsigned,
+      // every negative case is a narrowing conversion and the build stops.
+      switch (static_cast<qint64> (rig_->GetRxFrequency ())
+              - static_cast<qint64> (test_frequency))
         {
         case -5: resolution = -1; break;  // 10Hz truncated
         case 5: resolution = 1; break;    // 10Hz rounded
