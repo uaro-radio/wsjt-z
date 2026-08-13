@@ -136,7 +136,22 @@ jobs:
           fi
           printf 'attaching %d assets:\n' "${#files[@]}"
           printf '  %s\n' "${files[@]}"
+
+          # The description says what this build is and what was added to it.
+          # Generated notes alone are a list of commit subjects, which answers
+          # "what changed since last time" for somebody who already knows the
+          # project — and nothing at all for the operator who arrived here to
+          # download a program. The text lives in the repository so it can be
+          # edited without touching this workflow.
+          NOTES=$(mktemp)
+          if [ -f .uaham/release-notes.md ]; then
+            cat .uaham/release-notes.md > "$NOTES"
+          else
+            echo "::warning::.uaham/release-notes.md is missing — publishing with generated notes only"
+          fi
+
           gh release create "${GITHUB_REF_NAME}" \
             --title "WSJT-Z ${VERSION} (UaHamAward)" \
+            --notes-file "$NOTES" \
             --generate-notes \
             "${files[@]}"
