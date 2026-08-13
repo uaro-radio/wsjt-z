@@ -1,0 +1,54 @@
+name: CI
+
+# Manual for now, and Linux only. The macOS and Windows halves of the WSJT-X
+# pipeline build Qt from source and carry their own signing and installer
+# machinery; bringing those across is a job of its own, and shipping a Linux
+# build that is actually verified beats claiming three platforms that are not.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/uaham-integration]
+
+jobs:
+  # One source of truth for the version string: read it from Versions.cmake,
+  # with the fork marker from CMakeLists.txt appended, so an artifact of this
+  # fork is never named as though it came from the WSJT-Z project.
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: v
+        run: |
+          MAJOR=$(sed -nE 's/^[[:space:]]*set \(WSJTX_VERSION_MAJOR ([0-9]+)\).*/\1/p' Versions.cmake)
+          MINOR=$(sed -nE 's/^[[:space:]]*set \(WSJTX_VERSION_MINOR ([0-9]+)\).*/\1/p' Versions.cmake)
+          PATCH=$(sed -nE 's/^[[:space:]]*set \(WSJTX_VERSION_PATCH ([0-9]+)\).*/\1/p' Versions.cmake)
+          if [ -z "$MAJOR" ] || [ -z "$MINOR" ] || [ -z "$PATCH" ]; then
+            echo "::error::Could not derive the version from Versions.cmake"
+            exit 1
+          fi
+          VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          FORK_TAG=$(sed -nE 's/^[[:space:]]*set \(WSJT_FORK_TAG "([^"]*)".*/\1/p' CMakeLists.txt | head -1)
+          if [ -n "$FORK_TAG" ]; then
+            VERSION="${VERSION}-${FORK_TAG}"
+          fi
+          echo "Version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  linux:
+    needs: prepare
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      hamlib_branch: "4.7.0"
+      arch: "x86_64"
+
+  linux-arm:
+    needs: prepare
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      hamlib_branch: "4.7.0"
+      arch: "aarch64"

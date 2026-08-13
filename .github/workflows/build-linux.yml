@@ -1,0 +1,200 @@
+name: Build Linux
+
+# Modelled on the Linux workflow of the WSJT-X repository, adapted to this
+# tree. Three things there do not exist here and are left out rather than
+# passed and ignored:
+#
+#   * WSJT_BUILD_TESTS / ctest — WSJT-Z has no test suite wired into CMake.
+#   * WSJT_RELEASE_CHANNEL / WSJT_RC_NUMBER — this tree carries the older
+#     set_build_type module, which takes the channel as a macro argument
+#     (set_build_type (GA) in CMakeLists.txt) and has no cache variables.
+#   * The AppImage is built here by linuxdeploy, exactly as it is there;
+#     nothing in CMake is involved, so it ports across unchanged.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version string used in artifact names"
+        required: true
+        type: string
+      hamlib_branch:
+        description: "Hamlib branch to build"
+        required: false
+        type: string
+        default: "4.7.0"
+      arch:
+        description: "Linux target architecture: x86_64 or aarch64"
+        required: false
+        type: string
+        default: "x86_64"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      # libqt5multimedia5-plugins matters more than it looks: without it
+      # linuxdeploy-plugin-qt bundles no audio backend, and the AppImage
+      # starts with no sound devices at all — a warning on the build host,
+      # a broken program on the operator's.
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake gfortran \
+            libfftw3-dev libboost-all-dev \
+            qtbase5-dev qttools5-dev qtmultimedia5-dev libqt5serialport5-dev \
+            libqt5sql5-sqlite libqt5websockets5-dev \
+            libqt5multimedia5-plugins \
+            libusb-1.0-0-dev libudev-dev libreadline-dev portaudio19-dev \
+            autoconf automake libtool pkg-config \
+            texinfo \
+            dpkg-dev fakeroot \
+            asciidoctor \
+            rpm
+
+      - name: Cache Hamlib
+        id: hamlib-cache
+        uses: actions/cache@v5
+        with:
+          path: hamlib-prefix
+          key: hamlib-linux-${{ inputs.arch }}-${{ inputs.hamlib_branch }}-${{ hashFiles('.github/workflows/build-linux.yml') }}
+
+      - name: Build Hamlib
+        if: steps.hamlib-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch "${{ inputs.hamlib_branch }}" \
+            https://github.com/Hamlib/Hamlib.git hamlib-src
+          cd hamlib-src
+          ./bootstrap
+          ./configure \
+            --prefix="${GITHUB_WORKSPACE}/hamlib-prefix" \
+            --disable-shared --enable-static \
+            --without-cxx-binding \
+            CFLAGS="-g -O2 -fPIC -fdata-sections -ffunction-sections" \
+            LDFLAGS="-Wl,--gc-sections"
+          make -j$(nproc)
+          make install
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/hamlib-prefix" \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DWSJT_SKIP_MANPAGES=ON \
+            -DWSJT_GENERATE_DOCS=OFF \
+            -Wno-dev
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
+
+      - name: Verify binary
+        run: |
+          file build/wsjtx
+          file build/wsjtx | grep -q "ELF 64-bit"
+          # The fork marker has to reach the binary, or a build of this fork
+          # is indistinguishable from an official one at the only moment
+          # anybody checks — when reporting a problem with it.
+          strings build/wsjtx | grep -q -- "-uaham" \
+            || { echo "::error::WSJT_FORK_TAG missing from the built binary"; exit 1; }
+
+      - name: Install into AppDir
+        run: cmake --install build --prefix AppDir/usr
+
+      - name: Package AppImage
+        env:
+          VERSION: ${{ inputs.version }}
+          ARCH: ${{ inputs.arch }}
+          # Pinned and checksummed so an undetected upstream change fails the
+          # build instead of shipping. The Qt5 plugin stays on the rolling
+          # channel because upstream has cut no dated release that works on
+          # ubuntu-24.04 with Qt 5.15.
+          LINUXDEPLOY_TAG: "1-alpha-20251107-1"
+        run: |
+          case "$ARCH" in
+            x86_64)  LINUXDEPLOY_SHA256="c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d" ;;
+            aarch64) LINUXDEPLOY_SHA256="620095110d693282b8ebeb244a95b5e911cf8f65f76c88b4b47d16ae6346fcff" ;;
+            *)       echo "::error::Unknown linuxdeploy arch: $ARCH"; exit 1 ;;
+          esac
+          curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors -o linuxdeploy.AppImage \
+            "https://github.com/linuxdeploy/linuxdeploy/releases/download/${LINUXDEPLOY_TAG}/linuxdeploy-${ARCH}.AppImage"
+          curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors -o linuxdeploy-plugin-qt.AppImage \
+            "https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-${ARCH}.AppImage"
+          echo "${LINUXDEPLOY_SHA256}  linuxdeploy.AppImage" | sha256sum -c -
+          chmod +x linuxdeploy.AppImage linuxdeploy-plugin-qt.AppImage
+
+          # --appimage-extract-and-run avoids FUSE, which hosted runners lack.
+          export OUTPUT="wsjtz-${VERSION}-linux-${ARCH}.AppImage"
+          ./linuxdeploy.AppImage --appimage-extract-and-run \
+            --appdir AppDir \
+            --plugin qt \
+            --output appimage \
+            --desktop-file AppDir/usr/share/applications/wsjtx.desktop \
+            --icon-file AppDir/usr/share/pixmaps/wsjtx_icon.png
+
+          ls -lh "$OUTPUT"
+
+      - name: Smoke-test AppImage payload
+        env:
+          VERSION: ${{ inputs.version }}
+          ARCH: ${{ inputs.arch }}
+        run: |
+          APPIMAGE="wsjtz-${VERSION}-linux-${ARCH}.AppImage"
+          ./"$APPIMAGE" --appimage-extract >/dev/null
+          test -x squashfs-root/usr/bin/wsjtx
+          test -x squashfs-root/usr/bin/jt9
+          file squashfs-root/usr/bin/wsjtx | grep -q "ELF 64-bit"
+          ls squashfs-root/usr/lib/ | grep -q "^libQt5Core\.so"
+          ls squashfs-root/usr/lib/ | grep -q "^libQt5Widgets\.so"
+          ls squashfs-root/usr/lib/ | grep -q "^libQt5WebSockets\.so"
+          # Without a Qt audio backend plugin the program starts and reports no
+          # sound devices at all. linuxdeploy-plugin-qt only warns about this.
+          audio_plugins=$(find squashfs-root -path '*/plugins/audio/*.so' 2>/dev/null)
+          if [ -z "$audio_plugins" ]; then
+            echo "::error::No Qt audio backend plugins bundled in the AppImage."
+            find squashfs-root -path '*/plugins/*' -name '*.so' 2>/dev/null | head -20
+            exit 1
+          fi
+          echo "Qt audio plugins bundled:"
+          echo "$audio_plugins"
+          rm -rf squashfs-root
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v7
+        with:
+          name: wsjtz-${{ inputs.version }}-linux-${{ inputs.arch }}-AppImage
+          path: wsjtz-${{ inputs.version }}-linux-${{ inputs.arch }}.AppImage
+          if-no-files-found: error
+
+      # CPack's DEB generator ignores CPACK_PACKAGE_FILE_NAME and uses its own
+      # CPACK_DEBIAN_FILE_NAME, so the name is set explicitly to match the
+      # AppImage rather than coming out as wsjtz_3.0.0_amd64.deb.
+      - name: Package .deb and .rpm
+        env:
+          VERSION: ${{ inputs.version }}
+          ARCH: ${{ inputs.arch }}
+        run: |
+          cd build
+          cpack -G DEB -D "CPACK_DEBIAN_FILE_NAME=wsjtz-${VERSION}-linux-${ARCH}.deb"
+          cpack -G RPM -D "CPACK_RPM_FILE_NAME=wsjtz-${VERSION}-linux-${ARCH}.rpm"
+          ls -lh wsjtz-${VERSION}-linux-${ARCH}.deb wsjtz-${VERSION}-linux-${ARCH}.rpm
+          dpkg-deb --info "wsjtz-${VERSION}-linux-${ARCH}.deb" | head -20
+
+      - name: Upload .deb
+        uses: actions/upload-artifact@v7
+        with:
+          name: wsjtz-${{ inputs.version }}-linux-${{ inputs.arch }}-deb
+          path: build/wsjtz-${{ inputs.version }}-linux-${{ inputs.arch }}.deb
+          if-no-files-found: error
+
+      - name: Upload .rpm
+        uses: actions/upload-artifact@v7
+        with:
+          name: wsjtz-${{ inputs.version }}-linux-${{ inputs.arch }}-rpm
+          path: build/wsjtz-${{ inputs.version }}-linux-${{ inputs.arch }}.rpm
+          if-no-files-found: error
