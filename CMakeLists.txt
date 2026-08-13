@@ -1456,6 +1456,7 @@ set (LANGUAGES
   #no				# Norwegian
   #pt				# Portuguese
   ru				# Russian
+  uk				# Ukrainian
   #sv				# Swedish
   zh				# Chinese
   zh_TW				# Chinese traditional
