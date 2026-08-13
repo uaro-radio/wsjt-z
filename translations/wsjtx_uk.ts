@@ -273,7 +273,7 @@
     <message>
         <location filename="../models/Bands.cpp" line="203"/>
         <source>Band</source>
-        <translation type="unfinished"></translation>
+        <translation>Діапазон</translation>
     </message>
     <message>
         <location filename="../models/Bands.cpp" line="204"/>
@@ -337,12 +337,12 @@
     <message>
         <location filename="../models/CabrilloLog.cpp" line="98"/>
         <source>Rcvd</source>
-        <translation type="unfinished"></translation>
+        <translation>Отримано</translation>
     </message>
     <message>
         <location filename="../models/CabrilloLog.cpp" line="99"/>
         <source>Band</source>
-        <translation type="unfinished"></translation>
+        <translation>Діапазон</translation>
     </message>
 </context>
 <context>
@@ -1239,12 +1239,12 @@ Reverted Hamlib will be used after restart</source>
     <message>
         <location filename="../models/FoxLog.cpp" line="151"/>
         <source>Rcvd</source>
-        <translation type="unfinished"></translation>
+        <translation>Отримано</translation>
     </message>
     <message>
         <location filename="../models/FoxLog.cpp" line="152"/>
         <source>Band</source>
-        <translation type="unfinished"></translation>
+        <translation>Діапазон</translation>
     </message>
 </context>
 <context>
@@ -1514,7 +1514,7 @@ Reverted Hamlib will be used after restart</source>
     <message>
         <location filename="../widgets/logqso.ui" line="28"/>
         <source>Click OK to confirm the following QSO:</source>
-        <translation type="unfinished"></translation>
+        <translation>Натисніть «Гаразд», щоб підтвердити зв'язок:</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.ui" line="44"/>
@@ -1545,17 +1545,17 @@ Reverted Hamlib will be used after restart</source>
     <message>
         <location filename="../widgets/logqso.ui" line="181"/>
         <source>Band</source>
-        <translation type="unfinished"></translation>
+        <translation>Діапазон</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.ui" line="213"/>
         <source>Rpt Sent</source>
-        <translation type="unfinished"></translation>
+        <translation>Рапорт надано</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.ui" line="245"/>
         <source>Rpt Rcvd</source>
-        <translation type="unfinished"></translation>
+        <translation>Рапорт отримано</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.ui" line="277"/>
@@ -1565,12 +1565,12 @@ Reverted Hamlib will be used after restart</source>
     <message>
         <location filename="../widgets/logqso.ui" line="312"/>
         <source>Name</source>
-        <translation type="unfinished"></translation>
+        <translation>Ім'я</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.ui" line="338"/>
         <source>Tx power</source>
-        <translation type="unfinished"></translation>
+        <translation>Потужність</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.ui" line="351"/>
@@ -1582,47 +1582,47 @@ Reverted Hamlib will be used after restart</source>
     <message>
         <location filename="../widgets/logqso.ui" line="370"/>
         <source>Comments</source>
-        <translation type="unfinished"></translation>
+        <translation>Коментар</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.ui" line="403"/>
         <source>Operator</source>
-        <translation type="unfinished"></translation>
+        <translation>Оператор</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.ui" line="440"/>
         <source>Exch sent</source>
-        <translation type="unfinished"></translation>
+        <translation>Надіслано обмін</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.ui" line="473"/>
         <source>Rcvd</source>
-        <translation type="unfinished"></translation>
+        <translation>Отримано</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.ui" line="497"/>
         <source>Prop Mode</source>
-        <translation type="unfinished"></translation>
+        <translation>Вид проходження</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="30"/>
         <source>Aircraft scatter</source>
-        <translation type="unfinished"></translation>
+        <translation>Розсіяння на літаках</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="31"/>
         <source>Aurora-E</source>
-        <translation type="unfinished"></translation>
+        <translation>Полярне сяйво E</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="32"/>
         <source>Aurora</source>
-        <translation type="unfinished"></translation>
+        <translation>Полярне сяйво</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="33"/>
         <source>Back scatter</source>
-        <translation type="unfinished"></translation>
+        <translation>Зворотне розсіяння</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="34"/>
@@ -1632,32 +1632,32 @@ Reverted Hamlib will be used after restart</source>
     <message>
         <location filename="../widgets/logqso.cpp" line="35"/>
         <source>Earth-moon-earth</source>
-        <translation type="unfinished"></translation>
+        <translation>Земля — Місяць — Земля</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="36"/>
         <source>Sporadic E</source>
-        <translation type="unfinished"></translation>
+        <translation>Спорадичний шар E</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="37"/>
         <source>F2 Reflection</source>
-        <translation type="unfinished"></translation>
+        <translation>Відбиття від шару F2</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="38"/>
         <source>Field aligned irregularities</source>
-        <translation type="unfinished"></translation>
+        <translation>Неоднорідності вздовж магнітного поля</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="39"/>
         <source>Internet-assisted</source>
-        <translation type="unfinished"></translation>
+        <translation>За участю інтернету</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="40"/>
         <source>Ionoscatter</source>
-        <translation type="unfinished"></translation>
+        <translation>Іоносферне розсіяння</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="41"/>
@@ -1667,27 +1667,27 @@ Reverted Hamlib will be used after restart</source>
     <message>
         <location filename="../widgets/logqso.cpp" line="42"/>
         <source>Meteor scatter</source>
-        <translation type="unfinished"></translation>
+        <translation>Метеорне розсіяння</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="43"/>
         <source>Non-satellite repeater or transponder</source>
-        <translation type="unfinished"></translation>
+        <translation>Несупутниковий ретранслятор або транспондер</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="44"/>
         <source>Rain scatter</source>
-        <translation type="unfinished"></translation>
+        <translation>Розсіяння на дощі</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="45"/>
         <source>Satellite</source>
-        <translation type="unfinished"></translation>
+        <translation>Супутник</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="46"/>
         <source>Trans-equatorial</source>
-        <translation type="unfinished"></translation>
+        <translation>Трансекваторіальне проходження</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="47"/>
@@ -1698,12 +1698,12 @@ Reverted Hamlib will be used after restart</source>
         <location filename="../widgets/logqso.cpp" line="239"/>
         <location filename="../widgets/logqso.cpp" line="260"/>
         <source>Invalid QSO Data</source>
-        <translation type="unfinished"></translation>
+        <translation>Хибні дані зв'язку</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="240"/>
         <source>Check exchange sent and received</source>
-        <translation type="unfinished"></translation>
+        <translation>Перевірте надісланий і отриманий обмін</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="253"/>
@@ -1718,22 +1718,22 @@ Reverted Hamlib will be used after restart</source>
     <message>
         <location filename="../widgets/logqso.cpp" line="261"/>
         <source>Check all fields</source>
-        <translation type="unfinished"></translation>
+        <translation>Перевірте всі поля</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="270"/>
         <source>Log file error</source>
-        <translation type="unfinished"></translation>
+        <translation>Помилка файлу журналу</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="271"/>
         <source>Cannot open &quot;%1&quot; for append</source>
-        <translation type="unfinished"></translation>
+        <translation>Не вдалося відкрити «%1» для дозапису</translation>
     </message>
     <message>
         <location filename="../widgets/logqso.cpp" line="272"/>
         <source>Error: %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Помилка: %1</translation>
     </message>
 </context>
 <context>
@@ -1820,7 +1820,7 @@ Reverted Hamlib will be used after restart</source>
     <message>
         <location filename="../widgets/mainwindow-orig.ui" line="421"/>
         <source>Erase right window. Double-click to erase both windows.</source>
-        <translation type="unfinished"></translation>
+        <translation>Очистити праве вікно. Подвійний клік очищає обидва.</translation>
     </message>
     <message>
         <location filename="../widgets/mainwindow-orig.ui" line="424"/>
@@ -1860,7 +1860,7 @@ Reverted Hamlib will be used after restart</source>
     <message>
         <location filename="../widgets/mainwindow-orig.ui" line="472"/>
         <source>Decode most recent Rx period at QSO Frequency</source>
-        <translation type="unfinished"></translation>
+        <translation>Декодувати останній період прийому на частоті зв'язку</translation>
     </message>
     <message>
         <location filename="../widgets/mainwindow-orig.ui" line="487"/>
@@ -2031,7 +2031,7 @@ Yellow when too low</source>
     <message>
         <location filename="../widgets/mainwindow-orig.ui" line="1055"/>
         <source>Frequency to call CQ on in kHz above the current MHz</source>
-        <translation type="unfinished"></translation>
+        <translation>Частота для виклику CQ, у кілогерцях понад поточні мегагерци</translation>
     </message>
     <message>
         <location filename="../widgets/mainwindow-orig.ui" line="1058"/>
@@ -2054,7 +2054,7 @@ Not available to nonstandard callsign holders.</source>
     <message>
         <location filename="../widgets/mainwindow-orig.ui" line="1091"/>
         <source>Decode other Hounds calling above 1000 Hz audio offset</source>
-        <translation type="unfinished"></translation>
+        <translation>Декодувати інших мисливців, що викликають вище 1000 Гц</translation>
     </message>
     <message>
         <location filename="../widgets/mainwindow-orig.ui" line="1094"/>
@@ -2179,7 +2179,7 @@ When not checked you can view the calibration results.</source>
         <location filename="../widgets/mainwindow-orig.ui" line="1242"/>
         <location filename="../widgets/mainwindow.ui" line="2133"/>
         <source>Check to generate &quot;@1250  (SEND MSGS)&quot; in Tx6.</source>
-        <translation type="unfinished"></translation>
+        <translation>Позначте, щоб створювати «@1250  (SEND MSGS)» у Tx6.</translation>
     </message>
     <message>
         <location filename="../widgets/mainwindow-orig.ui" line="1245"/>
@@ -2305,7 +2305,7 @@ When not checked you can view the calibration results.</source>
     <message>
         <location filename="../widgets/mainwindow-orig.ui" line="1447"/>
         <source>Tx/Rx or Frequency calibration sequence length</source>
-        <translation type="unfinished"></translation>
+        <translation>Довжина послідовності калібрування прийому, передачі або частоти</translation>
     </message>
     <message>
         <location filename="../widgets/mainwindow-orig.ui" line="1453"/>
@@ -2366,7 +2366,7 @@ When not checked you can view the calibration results.</source>
     <message>
         <location filename="../widgets/mainwindow-orig.ui" line="1594"/>
         <source>Submode determines tone spacing; A is narrowest.</source>
-        <translation type="unfinished"></translation>
+        <translation>Підрежим задає крок між тонами; A — найвужчий.</translation>
     </message>
     <message>
         <location filename="../widgets/mainwindow-orig.ui" line="1600"/>
@@ -2394,7 +2394,7 @@ When not checked you can view the calibration results.</source>
     <message>
         <location filename="../widgets/mainwindow-orig.ui" line="1638"/>
         <source>Maximum drift rate in units of symbol rate per transmission.</source>
-        <translation type="unfinished"></translation>
+        <translation>Найбільший дрейф частоти в символьних швидкостях за передачу.</translation>
     </message>
     <message>
         <location filename="../widgets/mainwindow-orig.ui" line="1644"/>
@@ -3831,7 +3831,7 @@ Double-click to reset to the standard 73 message</source>
     <message>
         <location filename="../widgets/mainwindow.ui" line="526"/>
         <source>Name</source>
-        <translation type="unfinished"></translation>
+        <translation>Ім'я</translation>
     </message>
     <message>
         <location filename="../widgets/mainwindow.ui" line="549"/>
@@ -5209,7 +5209,7 @@ is already in CALL3.TXT, do you wish to replace it?</source>
     <message>
         <location filename="../widgets/mainwindow.cpp" line="9250"/>
         <source>Log file error</source>
-        <translation type="unfinished"></translation>
+        <translation>Помилка файлу журналу</translation>
     </message>
     <message>
         <location filename="../widgets/mainwindow.cpp" line="9251"/>
@@ -5756,7 +5756,7 @@ No</source>
         <location filename="../widgets/QSYMessageCreator.ui" line="726"/>
         <location filename="../widgets/QSYMessageCreator.ui" line="1958"/>
         <source>Band</source>
-        <translation type="unfinished"></translation>
+        <translation>Діапазон</translation>
     </message>
     <message>
         <location filename="../widgets/QSYMessageCreator.ui" line="614"/>
@@ -6066,7 +6066,7 @@ Message</source>
     <message>
         <location filename="../models/StationList.cpp" line="372"/>
         <source>Band</source>
-        <translation type="unfinished"></translation>
+        <translation>Діапазон</translation>
     </message>
     <message>
         <location filename="../models/StationList.cpp" line="373"/>
@@ -6528,7 +6528,7 @@ With no log page open in a browser nothing is sent, and logging works exactly as
     <message>
         <location filename="../Configuration.ui" line="83"/>
         <source>Check to allow grid changes from external programs</source>
-        <translation type="unfinished"></translation>
+        <translation>Дозволити зовнішнім програмам змінювати локатор</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="86"/>
@@ -6548,7 +6548,7 @@ With no log page open in a browser nothing is sent, and logging works exactly as
     <message>
         <location filename="../Configuration.ui" line="118"/>
         <source>Message generation for type 2 compound callsign holders:</source>
-        <translation type="unfinished"></translation>
+        <translation>Складання повідомлень для складених позивних 2-го типу:</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="134"/>
@@ -6578,7 +6578,7 @@ With no log page open in a browser nothing is sent, and logging works exactly as
     <message>
         <location filename="../Configuration.ui" line="194"/>
         <source>Set the font characteristics for the application.</source>
-        <translation type="unfinished"></translation>
+        <translation>Обрати шрифт програми.</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="197"/>
@@ -6608,7 +6608,7 @@ With no log page open in a browser nothing is sent, and logging works exactly as
     <message>
         <location filename="../Configuration.ui" line="241"/>
         <source>Show distance to DX station in miles rather than kilometers.</source>
-        <translation type="unfinished"></translation>
+        <translation>Показувати відстань до кореспондента в милях, а не в кілометрах.</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="244"/>
@@ -6749,7 +6749,7 @@ text message.</source>
     <message>
         <location filename="../Configuration.ui" line="441"/>
         <source>Send a CW ID after every 73 or free text message.</source>
-        <translation type="unfinished"></translation>
+        <translation>Надсилати ідентифікацію телеграфом після кожного 73 чи довільного тексту.</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="444"/>
@@ -6847,7 +6847,7 @@ this setting allows you to select which audio input will be used
     <message>
         <location filename="../Configuration.ui" line="596"/>
         <source>Transmit Audio Source</source>
-        <translation type="unfinished"></translation>
+        <translation>Джерело звуку на передачу</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="602"/>
@@ -6862,7 +6862,7 @@ this setting allows you to select which audio input will be used
     <message>
         <location filename="../Configuration.ui" line="634"/>
         <source>How this program activates the PTT on your radio?</source>
-        <translation type="unfinished"></translation>
+        <translation>Як програма вмикає передачу на вашому трансивері</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="637"/>
@@ -7103,7 +7103,7 @@ other hardware interface for PTT.</source>
     <message>
         <location filename="../Configuration.ui" line="1094"/>
         <source>Software flow control (very rare on CAT interfaces).</source>
-        <translation type="unfinished"></translation>
+        <translation>Програмне керування потоком (дуже рідко трапляється в CAT).</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="1097"/>
@@ -7187,7 +7187,7 @@ radio interface behave as expected.</source>
     <message>
         <location filename="../Configuration.ui" line="1336"/>
         <source>Poll Interval:</source>
-        <translation type="unfinished"></translation>
+        <translation>Інтервал опитування:</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="1346"/>
@@ -7203,7 +7203,7 @@ radio interface behave as expected.</source>
         <location filename="../Configuration.ui" line="1374"/>
         <location filename="../Configuration.ui" line="1410"/>
         <source>Update Hamlib</source>
-        <translation type="unfinished"></translation>
+        <translation>Оновити Hamlib</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="1380"/>
@@ -7223,7 +7223,7 @@ radio interface behave as expected.</source>
     <message>
         <location filename="../Configuration.ui" line="1400"/>
         <source>Revert Update</source>
-        <translation type="unfinished"></translation>
+        <translation>Скасувати оновлення</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="1407"/>
@@ -7233,12 +7233,12 @@ radio interface behave as expected.</source>
     <message>
         <location filename="../Configuration.ui" line="1419"/>
         <source>In use:</source>
-        <translation type="unfinished"></translation>
+        <translation>Використовується:</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="1426"/>
         <source>Backed up:</source>
-        <translation type="unfinished"></translation>
+        <translation>Резервна копія:</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="1453"/>
@@ -7248,7 +7248,7 @@ radio interface behave as expected.</source>
     <message>
         <location filename="../Configuration.ui" line="1456"/>
         <source>Audio interface settings</source>
-        <translation type="unfinished"></translation>
+        <translation>Налаштування звукового інтерфейсу</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="1462"/>
@@ -7272,37 +7272,37 @@ transmitting periods.</source>
     <message>
         <location filename="../Configuration.ui" line="1488"/>
         <source>Select the channel to use for receiving.</source>
-        <translation type="unfinished"></translation>
+        <translation>Оберіть канал для прийому.</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="1492"/>
         <location filename="../Configuration.ui" line="1545"/>
         <source>Mono</source>
-        <translation type="unfinished"></translation>
+        <translation>Моно</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="1497"/>
         <location filename="../Configuration.ui" line="1550"/>
         <source>Left</source>
-        <translation type="unfinished"></translation>
+        <translation>Лівий</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="1502"/>
         <location filename="../Configuration.ui" line="1555"/>
         <source>Right</source>
-        <translation type="unfinished"></translation>
+        <translation>Правий</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="1507"/>
         <location filename="../Configuration.ui" line="1560"/>
         <location filename="../Configuration.ui" line="4024"/>
         <source>Both</source>
-        <translation type="unfinished"></translation>
+        <translation>Обидва</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="1521"/>
         <source>Select the audio CODEC to use for receiving.</source>
-        <translation type="unfinished"></translation>
+        <translation>Оберіть звуковий пристрій для прийому.</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="1528"/>
@@ -7330,7 +7330,7 @@ both here.</source>
     <message>
         <location filename="../Configuration.ui" line="1583"/>
         <source>Use TCI Audio (restart required)</source>
-        <translation type="unfinished"></translation>
+        <translation>Використовувати звук TCI (потрібен перезапуск)</translation>
     </message>
     <message>
         <location filename="../Configuration.ui" line="1590"/>
