@@ -1,0 +1,142 @@
+name: Release
+
+# Pushing a tag is the whole release procedure:
+#
+#     git tag build/v3.0.0-2.0.18-uaham1
+#     git push origin build/v3.0.0-2.0.18-uaham1
+#
+# The tag names the artifacts, so it has to agree with what the source says
+# about itself; the prepare job below refuses the tag if it does not.
+#
+# WSJT-Z's own naming is <WSJT-X base>-<mod version>, as in
+# wsjtz-3.0.0-2.0.18-win64.exe. This fork appends its marker to that, so the
+# base says which WSJT-X this descends from, the mod version says which
+# WSJT-Z, and the marker says whose build it is.
+
+on:
+  push:
+    tags: ["build/v*"]
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: v
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#build/v}"
+
+          MAJOR=$(sed -nE 's/^[[:space:]]*set \(WSJTX_VERSION_MAJOR ([0-9]+)\).*/\1/p' Versions.cmake)
+          MINOR=$(sed -nE 's/^[[:space:]]*set \(WSJTX_VERSION_MINOR ([0-9]+)\).*/\1/p' Versions.cmake)
+          PATCH=$(sed -nE 's/^[[:space:]]*set \(WSJTX_VERSION_PATCH ([0-9]+)\).*/\1/p' Versions.cmake)
+          VERSION_Z=$(sed -nE 's/^[[:space:]]*set \(VERSION_Z "([^"]*)".*/\1/p' CMakeLists.txt | head -1)
+          FORK_TAG=$(sed -nE 's/^[[:space:]]*set \(WSJT_FORK_TAG "([^"]*)".*/\1/p' CMakeLists.txt | head -1)
+
+          EXPECTED="${MAJOR}.${MINOR}.${PATCH}"
+          [ -n "$VERSION_Z" ] && EXPECTED="${EXPECTED}-${VERSION_Z}"
+          [ -n "$FORK_TAG" ] && EXPECTED="${EXPECTED}-${FORK_TAG}"
+
+          echo "tag says:    $TAG_VERSION"
+          echo "source says: $EXPECTED"
+          # Letting these disagree ships a file whose name promises one version
+          # and whose binary reports another, which is the kind of thing nobody
+          # notices until they are debugging something else entirely.
+          if [ "$TAG_VERSION" != "$EXPECTED" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match the source ($EXPECTED)."
+            echo "::error::Bump Versions.cmake, VERSION_Z or WSJT_FORK_TAG, or retag."
+            exit 1
+          fi
+          echo "version=$EXPECTED" >> "$GITHUB_OUTPUT"
+
+  windows:
+    needs: prepare
+    uses: ./.github/workflows/build-windows.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      hamlib_branch: "4.7.0"
+
+  linux:
+    needs: prepare
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      hamlib_branch: "4.7.0"
+      arch: "x86_64"
+
+  linux-arm:
+    needs: prepare
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      hamlib_branch: "4.7.0"
+      arch: "aarch64"
+
+  release:
+    needs: [prepare, windows, linux, linux-arm]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f | sort
+
+      # Refuse to publish a partial release. The `needs:` above only proves the
+      # build jobs exited 0; a packaging step behind a false `if:` exits 0 too
+      # and produces nothing.
+      - name: Verify every platform produced an installer
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          shopt -s nullglob
+          labels=("Windows installer" "Linux x86_64 .deb" "Linux x86_64 .rpm" \
+                  "Linux aarch64 .deb" "Linux aarch64 .rpm")
+          patterns=("artifacts/wsjtz-${VERSION}-win64-installer/*.exe" \
+                    "artifacts/wsjtz-${VERSION}-linux-x86_64-deb/*.deb" \
+                    "artifacts/wsjtz-${VERSION}-linux-x86_64-rpm/*.rpm" \
+                    "artifacts/wsjtz-${VERSION}-linux-aarch64-deb/*.deb" \
+                    "artifacts/wsjtz-${VERSION}-linux-aarch64-rpm/*.rpm")
+          missing=0
+          for i in "${!labels[@]}"; do
+            # shellcheck disable=SC2206
+            matches=( ${patterns[$i]} )
+            if [ ${#matches[@]} -eq 0 ]; then
+              echo "::error::MISSING  ${labels[$i]} — no match for ${patterns[$i]}"
+              missing=$((missing + 1))
+            else
+              printf '  ok  %-20s %s\n' "${labels[$i]}" "${matches[0]}"
+            fi
+          done
+          [ "$missing" -eq 0 ] || { echo "::error::Refusing to publish a partial release."; exit 1; }
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          # Only the installers, by name. Selecting on extension alone would
+          # also sweep in every utility binary built alongside the program.
+          mapfile -t files < <(find artifacts -maxdepth 2 -type f \
+            -name "wsjtz-${VERSION}*" \
+            \( -name "*.exe" -o -name "*.deb" -o -name "*.rpm" \))
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::Asset filter matched nothing — refusing to publish an empty release."
+            exit 1
+          fi
+          printf 'attaching %d assets:\n' "${#files[@]}"
+          printf '  %s\n' "${files[@]}"
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "WSJT-Z ${VERSION} (UaHamAward)" \
+            --generate-notes \
+            "${files[@]}"

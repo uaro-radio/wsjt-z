@@ -1,9 +1,12 @@
 name: CI
 
-# Manual for now, and Linux only. The macOS and Windows halves of the WSJT-X
-# pipeline build Qt from source and carry their own signing and installer
-# machinery; bringing those across is a job of its own, and shipping a Linux
-# build that is actually verified beats claiming three platforms that are not.
+# Windows and Linux. Windows is what WSJT-Z actually ships — upstream
+# publishes win32 and win64 installers and nothing else — and Linux is here
+# because the operators this fork is built for run both.
+#
+# macOS is absent: it needs Qt built from source and its own signing and
+# bundling machinery, and upstream WSJT-Z has never published a macOS build to
+# match against.
 
 on:
   workflow_dispatch:
@@ -29,7 +32,16 @@ jobs:
             echo "::error::Could not derive the version from Versions.cmake"
             exit 1
           fi
+          # WSJT-Z names its own releases <wsjtx base>-<mod version>, as in
+          # wsjtz-3.0.0-2.0.18-win64.exe. Keeping both matters: the base says
+          # which WSJT-X this descends from, the mod version says which WSJT-Z,
+          # and dropping either leaves an operator unable to say what they are
+          # running. The fork marker goes on the end.
+          VERSION_Z=$(sed -nE 's/^[[:space:]]*set \(VERSION_Z "([^"]*)".*/\1/p' CMakeLists.txt | head -1)
           VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          if [ -n "$VERSION_Z" ]; then
+            VERSION="${VERSION}-${VERSION_Z}"
+          fi
           FORK_TAG=$(sed -nE 's/^[[:space:]]*set \(WSJT_FORK_TAG "([^"]*)".*/\1/p' CMakeLists.txt | head -1)
           if [ -n "$FORK_TAG" ]; then
             VERSION="${VERSION}-${FORK_TAG}"
@@ -52,3 +64,10 @@ jobs:
       version: ${{ needs.prepare.outputs.version }}
       hamlib_branch: "4.7.0"
       arch: "aarch64"
+
+  windows:
+    needs: prepare
+    uses: ./.github/workflows/build-windows.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      hamlib_branch: "4.7.0"

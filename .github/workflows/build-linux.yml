@@ -8,8 +8,7 @@ name: Build Linux
 #   * WSJT_RELEASE_CHANNEL / WSJT_RC_NUMBER — this tree carries the older
 #     set_build_type module, which takes the channel as a macro argument
 #     (set_build_type (GA) in CMakeLists.txt) and has no cache variables.
-#   * The AppImage is built here by linuxdeploy, exactly as it is there;
-#     nothing in CMake is involved, so it ports across unchanged.
+#   * The AppImage — see the note further down, where it would have been.
 
 on:
   workflow_call:
@@ -36,10 +35,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # libqt5multimedia5-plugins matters more than it looks: without it
-      # linuxdeploy-plugin-qt bundles no audio backend, and the AppImage
-      # starts with no sound devices at all — a warning on the build host,
-      # a broken program on the operator's.
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -103,77 +98,24 @@ jobs:
           strings build/wsjtx | grep -q -- "-uaham" \
             || { echo "::error::WSJT_FORK_TAG missing from the built binary"; exit 1; }
 
-      - name: Install into AppDir
-        run: cmake --install build --prefix AppDir/usr
-
-      - name: Package AppImage
-        env:
-          VERSION: ${{ inputs.version }}
-          ARCH: ${{ inputs.arch }}
-          # Pinned and checksummed so an undetected upstream change fails the
-          # build instead of shipping. The Qt5 plugin stays on the rolling
-          # channel because upstream has cut no dated release that works on
-          # ubuntu-24.04 with Qt 5.15.
-          LINUXDEPLOY_TAG: "1-alpha-20251107-1"
-        run: |
-          case "$ARCH" in
-            x86_64)  LINUXDEPLOY_SHA256="c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d" ;;
-            aarch64) LINUXDEPLOY_SHA256="620095110d693282b8ebeb244a95b5e911cf8f65f76c88b4b47d16ae6346fcff" ;;
-            *)       echo "::error::Unknown linuxdeploy arch: $ARCH"; exit 1 ;;
-          esac
-          curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors -o linuxdeploy.AppImage \
-            "https://github.com/linuxdeploy/linuxdeploy/releases/download/${LINUXDEPLOY_TAG}/linuxdeploy-${ARCH}.AppImage"
-          curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors -o linuxdeploy-plugin-qt.AppImage \
-            "https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-${ARCH}.AppImage"
-          echo "${LINUXDEPLOY_SHA256}  linuxdeploy.AppImage" | sha256sum -c -
-          chmod +x linuxdeploy.AppImage linuxdeploy-plugin-qt.AppImage
-
-          # --appimage-extract-and-run avoids FUSE, which hosted runners lack.
-          export OUTPUT="wsjtz-${VERSION}-linux-${ARCH}.AppImage"
-          ./linuxdeploy.AppImage --appimage-extract-and-run \
-            --appdir AppDir \
-            --plugin qt \
-            --output appimage \
-            --desktop-file AppDir/usr/share/applications/wsjtx.desktop \
-            --icon-file AppDir/usr/share/pixmaps/wsjtx_icon.png
-
-          ls -lh "$OUTPUT"
-
-      - name: Smoke-test AppImage payload
-        env:
-          VERSION: ${{ inputs.version }}
-          ARCH: ${{ inputs.arch }}
-        run: |
-          APPIMAGE="wsjtz-${VERSION}-linux-${ARCH}.AppImage"
-          ./"$APPIMAGE" --appimage-extract >/dev/null
-          test -x squashfs-root/usr/bin/wsjtx
-          test -x squashfs-root/usr/bin/jt9
-          file squashfs-root/usr/bin/wsjtx | grep -q "ELF 64-bit"
-          ls squashfs-root/usr/lib/ | grep -q "^libQt5Core\.so"
-          ls squashfs-root/usr/lib/ | grep -q "^libQt5Widgets\.so"
-          ls squashfs-root/usr/lib/ | grep -q "^libQt5WebSockets\.so"
-          # Without a Qt audio backend plugin the program starts and reports no
-          # sound devices at all. linuxdeploy-plugin-qt only warns about this.
-          audio_plugins=$(find squashfs-root -path '*/plugins/audio/*.so' 2>/dev/null)
-          if [ -z "$audio_plugins" ]; then
-            echo "::error::No Qt audio backend plugins bundled in the AppImage."
-            find squashfs-root -path '*/plugins/*' -name '*.so' 2>/dev/null | head -20
-            exit 1
-          fi
-          echo "Qt audio plugins bundled:"
-          echo "$audio_plugins"
-          rm -rf squashfs-root
-
-      - name: Upload AppImage
-        uses: actions/upload-artifact@v7
-        with:
-          name: wsjtz-${{ inputs.version }}-linux-${{ inputs.arch }}-AppImage
-          path: wsjtz-${{ inputs.version }}-linux-${{ inputs.arch }}.AppImage
-          if-no-files-found: error
+      # AppImage is deliberately absent.
+      #
+      # linuxdeploy refuses this tree's AppDir with "Could not find suitable
+      # icon for Icon entry: wsjtx_icon", while accepting an AppDir built the
+      # same way from WSJT-X — same linuxdeploy build, byte-identical
+      # wsjtx.desktop, an icon in the same place, and the same command line.
+      # In the WSJT-X run it warns that it cannot determine the icon's size and
+      # carries on with the copy it just made under hicolor/128x128; here it
+      # gives up instead. That is a defect in linuxdeploy, not in this
+      # repository, and chasing it buys a format upstream WSJT-Z has never
+      # shipped — it publishes Windows installers and nothing else.
+      #
+      # .deb and .rpm below come from CPack and do not involve linuxdeploy at
+      # all, so Linux users are still served.
 
       # CPack's DEB generator ignores CPACK_PACKAGE_FILE_NAME and uses its own
-      # CPACK_DEBIAN_FILE_NAME, so the name is set explicitly to match the
-      # AppImage rather than coming out as wsjtz_3.0.0_amd64.deb.
+      # CPACK_DEBIAN_FILE_NAME, so the name is set explicitly rather than
+      # coming out as wsjtz_3.0.0_amd64.deb.
       - name: Package .deb and .rpm
         env:
           VERSION: ${{ inputs.version }}

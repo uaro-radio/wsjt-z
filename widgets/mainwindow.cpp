@@ -895,7 +895,13 @@ MainWindow::MainWindow(QDir const& temp_directory, bool multiple,
       if (m_pskReporterView) m_pskReporterView->setFont(font);
     });
 
-  setWindowTitle (program_title () + " (WSJT-Z MOD by SQ9FVE " + QStringLiteral (VERSION_Z) + ")");
+  // The title already names the WSJT-Z author; this adds who made the build
+  // in front of the operator, which is the honest place for it — somebody
+  // reporting a problem with the country filter or the uahamaward.com
+  // connection should be able to see whose work that is without opening a
+  // dialog.
+  setWindowTitle (program_title () + " (WSJT-Z MOD by SQ9FVE " + QStringLiteral (VERSION_Z)
+                  + " · UaHamAward by UR3PKI)");
 
 
   connect(&proc_jt9, &QProcess::readyReadStandardOutput, this, &MainWindow::readFromStdout);

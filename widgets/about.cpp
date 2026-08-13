@@ -37,7 +37,8 @@ CAboutDlg::CAboutDlg(QWidget *parent) :
     // report a bug — the country filter and the uahamaward.com connection are
     // neither the WSJT-X team's work nor the WSJT-Z project's, and should not
     // become their correspondence.
-    "<b>Modified build.</b> This is not an official WSJT-Z release.<br />"
+    "<b>Modified build by Petro Ostapuk, UR3PKI.</b><br />"
+    "This is not an official WSJT-Z release.<br />"
     "It adds a DXCC country filter for the decode windows and a<br />"
     "direct connection to uahamaward.com for logged contacts.<br />"
     "Report problems with those to the fork, not to the WSJT-Z<br />"
