@@ -2,6 +2,11 @@ subroutine decode0(dd,ss,savg,nstandalone)
 
   use timer_module, only: timer
   parameter (NSMAX=60*96000)
+! NFFT is the third dimension of the ss and savg dummy arguments, and it has
+! to be a constant expression. Every other file in libm65 declares it —
+! m65.f90, symspec.f90, recvpkt.f90, wideband_sync.f90 — and this one did not,
+! so implicit typing made it a variable and newer gfortran refuses it.
+  parameter (NFFT=32768)
 
   real*4 dd(4,NSMAX),ss(4,322,NFFT),savg(4,NFFT)
   real*8 fcenter
