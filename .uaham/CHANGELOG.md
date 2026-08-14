@@ -9,10 +9,11 @@ than the obvious alternative.
 
 ---
 
-## Unreleased — first build
+## 3.0.0-2.0.18-uaham1 — 2026-08-14
 
-Not yet tagged. The tag will be `build/v3.0.0-2.0.18-uaham1`; the version has
-three parts and the release job refuses a tag that disagrees with any of them.
+First release. Five installers: Windows, and Linux x86_64/aarch64 as `.deb`
+and `.rpm`. The version has three parts and the release job refuses a tag that
+disagrees with any of them.
 
 ### Country filter
 
@@ -59,8 +60,12 @@ belongs at the top of the processing loop.
 
 ### Windows build fixes
 
-Both in inherited code, both already solved upstream in WSJT-X, neither picked
-up by WSJT-Z:
+Six of them, in six consecutive attempts. **Every one is in inherited code,
+every one is Windows-only, and every one was already fixed upstream in
+WSJT-X** — WSJT-Z has no CI, its Windows builds are made by hand on a machine
+whose toolchain was set up years ago, so nothing here had ever been compiled
+on a current one. This fork's CI is effectively that tree's first clean-room
+build in years.
 
 - **`.tls_common`**: `decoder.f90` and `map65_mmdec.f90` still included
   `timer_common.inc`, whose `!$omp threadprivate(/timer_private/)` makes
@@ -69,6 +74,23 @@ up by WSJT-Z:
 - **`-Werror=maybe-uninitialized`** on the placement-new'd `HRDMessage` struct,
   a false positive from MinGW gcc 16. Demoted to a warning for Windows +
   gcc 16 or newer only, scoped exactly as upstream scopes it.
+- **`OmniRigTransceiver`**: a narrowing conversion in a `switch` subject.
+- **FFTW threads** were not linked — `CMake/Modules/FindFFTW3.cmake` was too
+  old to look for them. Replaced wholesale with WSJT-X's version.
+- **`NFFT` undeclared** in `map65/libm65/decode0.f90`. Upstream fixed this on
+  6 June with `parameter (NFFT=32768)`; the same line, arrived at
+  independently, is what fixes it here.
+- **`-Werror=unused-but-set-variable`** in `map65/getdev.cpp` and
+  `map65/devsetup.cpp`. First silenced by dropping `-Werror` for `map65/` and
+  `qmap/`, then done properly: upstream's `2e3b066b0` removes the four dead
+  counters and replaces every `sprintf` in the touched code with `snprintf`,
+  so it closes some unbounded buffer writes too. `-Werror` is back everywhere.
+
+  **That patch cannot be applied with `git apply` or `patch`.** WSJT-Z's map65
+  sources are CRLF and upstream converted them to LF, so every hunk fails on
+  line endings alone. It was applied as byte replacements that leave the CRLF
+  alone; the diffstat then matches upstream's file for file, which is the
+  check worth repeating if more of these need porting.
 
 ### CI, which upstream does not have
 
