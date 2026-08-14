@@ -118,6 +118,19 @@ is the kind of thing nobody notices until they are debugging something else.
 Nothing is published unless every platform produced an installer. The
 description comes from `.uaham/release-notes.md`; edit that, not the workflow.
 
+**Release notes are written in both languages, in full.** Ukrainian first, then
+an `# English` section carrying the same sections with the same headings — not
+a summary paragraph, which is what this file used to end with. Whoever
+downloads a WSJT-Z fork is as likely to read English as Ukrainian, and a
+release page that explains a country filter in one language and waves at it in
+the other gets misunderstood in exactly the half nobody checks. A section added
+to one language and not the other is a review comment.
+
+Notes are baked in at tag time: the release job checks out the tag, so editing
+`release-notes.md` afterwards changes nothing on the page. Fix a published
+release with `gh release edit <tag> --notes-file .uaham/release-notes.md`
+**and** commit the file, or the next release repeats the omission.
+
 ---
 
 ## Gotchas that cost real time
