@@ -195,7 +195,14 @@ their neighbours, producing valid XML and nonsense text.
 ## Boundaries
 
 - **Never push this fork to `sq9fve/wsjt-z`.** Contributions go upstream as
-  pull requests.
+  pull requests. Two facts make this easy to get wrong. The only git remote
+  here is `origin`, which is ours — so no push can reach upstream by accident.
+  But this repository **is** a GitHub fork of `sq9fve/wsjt-z`, and `gh pr
+  create` in a fork defaults its base to the **parent's** default branch. A
+  pull request meant for our own `master` will be aimed at upstream unless
+  `--repo uaro-radio/wsjt-z` is given. Merge locally and push to `origin`
+  instead; the CI publishes nothing anywhere else, and nothing under
+  `.github/workflows/` names another repository.
 - Keep `UaHam/` in step with the WSJT-X fork; write the feature there first.
 - QRZ data is shown to the operator and goes nowhere else.
 - Ask before changing the site protocol, the tag format, or anything under
