@@ -6137,7 +6137,7 @@ void MainWindow::readFromStdout()                             //readFromStdout
               auto_sequence (decodedtext, 25, 50);
             } else {
               if (m_zdebug) {
-                log("AutoQSO Skipped");
+                log("AutoQSO Policy: auto_sequence skipped");
               }
             }
         }
@@ -14713,73 +14713,37 @@ bool MainWindow::callsignFiltered(DecodedText dt, bool allowQsoPartnerBypass)
 
 bool MainWindow::isAutomaticQsoAllowed(DecodedText const& message)
 {
-    QString deCall;
-    QString deGrid;
-    message.deCallAndGrid(deCall, deGrid);
+    // Only apply strict filtering while WSJT-X is in CALLING state.
+    // In all other states, keep the original auto_sequence behaviour.
 
-    // Filtering is an admission rule for a NEW automatic QSO.
-    //
-    // Once a QSO has already been accepted, WSJT-X auto_sequence()
-    // must continue to handle it normally.
-    bool const startingNewQso =
-        m_bCallingCQ &&
-        !m_bAutoReply &&
-        m_QSOProgress == CALLING;
+    bool const isQSOStateCalling = (m_QSOProgress == CALLING);
 
-    if (m_zdebug) {
-        log(QString(
-            "AutoQSO policy: ENTRY "
-            "msg='%1' deCall=%2 deGrid=%3 "
-            "callingCQ=%4 autoReply=%5 qsoProgress=%6 "
-            "hisCall=%7 lastCall=%8 dxEntry=%9")
-            .arg(message.string())
-            .arg(deCall)
-            .arg(deGrid)
-            .arg(m_bCallingCQ)
-            .arg(m_bAutoReply)
-            .arg(m_QSOProgress)
-            .arg(m_hisCall)
-            .arg(m_lastCall)
-            .arg(ui->dxCallEntry->text()));
-    }
-
-    // Not starting a new QSO.
-    // Do not interfere with normal WSJT-X AutoSeq behaviour.
-    if (!startingNewQso) {
-        if (m_zdebug) {
-            log("AutoQSO policy: ALLOW - existing QSO / not calling CQ");
-        }
-
+    if (!isQSOStateCalling) {
+      if (m_zdebug) {
+        log("AutoQSO policy: QSO is not in CALLING state. ALLOWED ");
+      }
         return true;
     }
 
-    // Starting a new automatic QSO:
-    // apply the complete WSJT-Z filter without the
-    // current/last-QSO-partner bypass.
-    bool const isFiltered = callsignFiltered(message, false);
-
-    if (isFiltered) {
-        if (m_zdebug) {
-            log(QString(
-                "AutoQSO policy: REJECT - filtered new caller "
-                "deCall=%1 msg='%2'")
-                .arg(deCall)
-                .arg(message.string()));
-        }
-
-        return false;
-    }
+    bool const isCallSignFiltered = callsignFiltered(message, false);
 
     if (m_zdebug) {
+        QString deCall;
+        QString deGrid;
+        message.deCallAndGrid(deCall, deGrid);
+
         log(QString(
-            "AutoQSO policy: ALLOW - new caller passed filters "
-            "deCall=%1 msg='%2'")
+            "AutoQSO policy: %1 while CALLING "
+            "call=%2 msg='%3' hisCall=%4 lastCall=%5")
+            .arg(isCallSignFiltered ? "REJECT" : "ALLOW")
             .arg(deCall)
-            .arg(message.string()));
+            .arg(message.string())
+            .arg(m_hisCall)
+            .arg(m_lastCall));
     }
 
-    return true;
-} 
+    return !isCallSignFiltered;
+}
 
 void MainWindow::on_actionIgnore_station_triggered() {
     QTextCursor cursor;
