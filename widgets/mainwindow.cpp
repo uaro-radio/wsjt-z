@@ -6131,7 +6131,7 @@ void MainWindow::readFromStdout()                             //readFromStdout
         if(m_mode=="FT8" or m_mode=="FT4" or m_mode=="FT2" or m_mode=="Q65"
            or m_mode=="JT4" or m_mode=="JT65" or m_mode=="JT9" or m_mode=="FST4") {
             if (m_zdebug) {
-              log(QString("Preventing HoundFrom Spotting Attempt. decodedtext=%1").arg(decodedtext));
+              log(QString("Preventing HoundFrom Spotting Attempt. decodedtext=%1").arg(decodedtext.string()));
             }
             if (isAutomaticQsoAllowed(decodedtext)) {
               auto_sequence (decodedtext, 25, 50);
