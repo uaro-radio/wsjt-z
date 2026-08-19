@@ -6130,7 +6130,16 @@ void MainWindow::readFromStdout()                             //readFromStdout
       if(m_mode!="FT8" or (SpecOp::HOUND != m_specOp) or (SpecOp::HOUND == m_specOp and sfox)) {
         if(m_mode=="FT8" or m_mode=="FT4" or m_mode=="FT2" or m_mode=="Q65"
            or m_mode=="JT4" or m_mode=="JT65" or m_mode=="JT9" or m_mode=="FST4") {
-          auto_sequence (decodedtext, 25, 50);
+            if (m_zdebug) {
+              log(QString("Preventing HoundFrom Spotting Attempt. decodedtext=%1").arg(decodedtext));
+            }
+            if (isAutomaticQsoAllowed(decodedtext)) {
+              auto_sequence (decodedtext, 25, 50);
+            } else {
+              if (m_zdebug) {
+                log("AutoQSO Skipped");
+              }
+            }
         }
 
 // find and extract any report for myCall, but save in m_rptRcvd only if it's from DXcall
@@ -14218,7 +14227,7 @@ void MainWindow::rebuildFilterCache() const
 static const QRegularExpression kReDigit{"[0-9]"};
 static const QRegularExpression kReCqStart{"^(CQ|CQ\\s\\w+)$"};
 
-bool MainWindow::callsignFiltered(DecodedText dt)
+bool MainWindow::callsignFiltered(DecodedText dt, bool allowQsoPartnerBypass)
 {
 
     if (!m_filterCacheValid) rebuildFilterCache();
@@ -14296,8 +14305,13 @@ bool MainWindow::callsignFiltered(DecodedText dt)
           }
      }
 
-    if (m_lastCall == dxCall || m_hisCall == dxCall) {
-        if (m_zdebug) log("Current or last QSO partner.");
+    if (allowQsoPartnerBypass && (m_lastCall == dxCall || m_hisCall == dxCall)) {
+        if (m_zdebug) {
+          log(QString("Current or last QSO partner. dxCall = %1, hisCall = %2, lastCall = %3")
+              .arg(dxCall)
+              .arg(m_hisCall)
+              .arg(m_lastCall));
+        }
         return false;
     }
 
@@ -14696,6 +14710,76 @@ bool MainWindow::callsignFiltered(DecodedText dt)
     if (m_zdebug) log("callsignFiltered: EXIT");
     return false;
 }
+
+bool MainWindow::isAutomaticQsoAllowed(DecodedText const& message)
+{
+    QString deCall;
+    QString deGrid;
+    message.deCallAndGrid(deCall, deGrid);
+
+    // Filtering is an admission rule for a NEW automatic QSO.
+    //
+    // Once a QSO has already been accepted, WSJT-X auto_sequence()
+    // must continue to handle it normally.
+    bool const startingNewQso =
+        m_bCallingCQ &&
+        !m_bAutoReply &&
+        m_QSOProgress == CALLING;
+
+    if (m_zdebug) {
+        log(QString(
+            "AutoQSO policy: ENTRY "
+            "msg='%1' deCall=%2 deGrid=%3 "
+            "callingCQ=%4 autoReply=%5 qsoProgress=%6 "
+            "hisCall=%7 lastCall=%8 dxEntry=%9")
+            .arg(message.string())
+            .arg(deCall)
+            .arg(deGrid)
+            .arg(m_bCallingCQ)
+            .arg(m_bAutoReply)
+            .arg(m_QSOProgress)
+            .arg(m_hisCall)
+            .arg(m_lastCall)
+            .arg(ui->dxCallEntry->text()));
+    }
+
+    // Not starting a new QSO.
+    // Do not interfere with normal WSJT-X AutoSeq behaviour.
+    if (!startingNewQso) {
+        if (m_zdebug) {
+            log("AutoQSO policy: ALLOW - existing QSO / not calling CQ");
+        }
+
+        return true;
+    }
+
+    // Starting a new automatic QSO:
+    // apply the complete WSJT-Z filter without the
+    // current/last-QSO-partner bypass.
+    bool const isFiltered = callsignFiltered(message, false);
+
+    if (isFiltered) {
+        if (m_zdebug) {
+            log(QString(
+                "AutoQSO policy: REJECT - filtered new caller "
+                "deCall=%1 msg='%2'")
+                .arg(deCall)
+                .arg(message.string()));
+        }
+
+        return false;
+    }
+
+    if (m_zdebug) {
+        log(QString(
+            "AutoQSO policy: ALLOW - new caller passed filters "
+            "deCall=%1 msg='%2'")
+            .arg(deCall)
+            .arg(message.string()));
+    }
+
+    return true;
+} 
 
 void MainWindow::on_actionIgnore_station_triggered() {
     QTextCursor cursor;
