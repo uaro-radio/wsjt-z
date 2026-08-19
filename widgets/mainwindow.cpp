@@ -14720,7 +14720,7 @@ bool MainWindow::isAutomaticQsoAllowed(DecodedText const& message)
 
     if (!isQSOStateCalling) {
       if (m_zdebug) {
-        log("AutoQSO policy: QSO is not in CALLING state. ALLOWED ");
+        log("AutoQSO policy: QSO is not in CALLING state. ALLOW");
       }
         return true;
     }
