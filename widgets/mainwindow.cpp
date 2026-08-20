@@ -6130,7 +6130,16 @@ void MainWindow::readFromStdout()                             //readFromStdout
       if(m_mode!="FT8" or (SpecOp::HOUND != m_specOp) or (SpecOp::HOUND == m_specOp and sfox)) {
         if(m_mode=="FT8" or m_mode=="FT4" or m_mode=="FT2" or m_mode=="Q65"
            or m_mode=="JT4" or m_mode=="JT65" or m_mode=="JT9" or m_mode=="FST4") {
-          auto_sequence (decodedtext, 25, 50);
+            if (m_zdebug) {
+              log(QString("Preventing HoundFrom Spotting Attempt. decodedtext=%1").arg(decodedtext.string()));
+            }
+            if (isAutomaticQsoAllowed(decodedtext)) {
+              auto_sequence (decodedtext, 25, 50);
+            } else {
+              if (m_zdebug) {
+                log("AutoQSO Policy: auto_sequence skipped");
+              }
+            }
         }
 
 // find and extract any report for myCall, but save in m_rptRcvd only if it's from DXcall
@@ -14218,7 +14227,7 @@ void MainWindow::rebuildFilterCache() const
 static const QRegularExpression kReDigit{"[0-9]"};
 static const QRegularExpression kReCqStart{"^(CQ|CQ\\s\\w+)$"};
 
-bool MainWindow::callsignFiltered(DecodedText dt)
+bool MainWindow::callsignFiltered(DecodedText dt, bool allowQsoPartnerBypass)
 {
 
     if (!m_filterCacheValid) rebuildFilterCache();
@@ -14296,8 +14305,13 @@ bool MainWindow::callsignFiltered(DecodedText dt)
           }
      }
 
-    if (m_lastCall == dxCall || m_hisCall == dxCall) {
-        if (m_zdebug) log("Current or last QSO partner.");
+    if (allowQsoPartnerBypass && (m_lastCall == dxCall || m_hisCall == dxCall)) {
+        if (m_zdebug) {
+          log(QString("Current or last QSO partner. dxCall = %1, hisCall = %2, lastCall = %3")
+              .arg(dxCall)
+              .arg(m_hisCall)
+              .arg(m_lastCall));
+        }
         return false;
     }
 
@@ -14695,6 +14709,40 @@ bool MainWindow::callsignFiltered(DecodedText dt)
 
     if (m_zdebug) log("callsignFiltered: EXIT");
     return false;
+}
+
+bool MainWindow::isAutomaticQsoAllowed(DecodedText const& message)
+{
+    // Only apply strict filtering while WSJT-X is in CALLING state.
+    // In all other states, keep the original auto_sequence behaviour.
+
+    bool const isQSOStateCalling = (m_QSOProgress == CALLING);
+
+    if (!isQSOStateCalling) {
+      if (m_zdebug) {
+        log("AutoQSO policy: QSO is not in CALLING state. ALLOW");
+      }
+        return true;
+    }
+
+    bool const isCallSignFiltered = callsignFiltered(message, false);
+
+    if (m_zdebug) {
+        QString deCall;
+        QString deGrid;
+        message.deCallAndGrid(deCall, deGrid);
+
+        log(QString(
+            "AutoQSO policy: %1 while CALLING "
+            "call=%2 msg='%3' hisCall=%4 lastCall=%5")
+            .arg(isCallSignFiltered ? "REJECT" : "ALLOW")
+            .arg(deCall)
+            .arg(message.string())
+            .arg(m_hisCall)
+            .arg(m_lastCall));
+    }
+
+    return !isCallSignFiltered;
 }
 
 void MainWindow::on_actionIgnore_station_triggered() {
