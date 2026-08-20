@@ -205,6 +205,29 @@ their neighbours, producing valid XML and nonsense text.
 
 ---
 
+## Commits
+
+- **No AI co-author trailers.** Nothing in a commit message credits an
+  assistant — no `Co-Authored-By:` for Claude or any other tool, no generated-by
+  footer. The person who decided the change owns it; the tooling that typed it
+  is no more a co-author than the editor is.
+- **Commit as an address GitHub can resolve.** GitHub links a commit to an
+  account by matching the author email against the verified addresses on that
+  account, and nothing else. An address that is not on the account makes the
+  commit authorless on the web view and invisible to the contributor graph —
+  the work lands, the name does not. Check with:
+
+  ```sh
+  gh api repos/uaro-radio/wsjt-z/commits/HEAD --jq '.author.login // "NOT LINKED"'
+  ```
+
+  If that prints `NOT LINKED`, the address in `git config user.email` is
+  missing from https://github.com/settings/emails. Adding and verifying it
+  there fixes every past commit at once — GitHub re-links history, so there is
+  never a reason to rewrite commits over this.
+
+---
+
 ## Boundaries
 
 - **Never push this fork to `sq9fve/wsjt-z`.** Contributions go upstream as
@@ -226,4 +249,4 @@ their neighbours, producing valid XML and nonsense text.
 See `.uaham/CHANGELOG.md` for what changed and why. The WSJT-X fork's
 `AGENTS.md` carries the full protocol contract with the site.
 
-Last updated: 2026-08-14
+Last updated: 2026-08-20
