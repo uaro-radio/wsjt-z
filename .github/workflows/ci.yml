@@ -8,10 +8,13 @@ name: CI
 # bundling machinery, and upstream WSJT-Z has never published a macOS build to
 # match against.
 
+# feat/uaham-integration was the integration branch and is long since merged;
+# master is where the work lands now, and a green run on master is what Auto
+# release waits for.
 on:
   workflow_dispatch:
   push:
-    branches: [feat/uaham-integration]
+    branches: [master]
 
 jobs:
   # One source of truth for the version string: read it from Versions.cmake,

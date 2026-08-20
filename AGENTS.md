@@ -104,9 +104,22 @@ after that incremental builds are seconds. Output in `build/linux/`.
 
 ## Releasing
 
+**Bumping the version is the release.** Put a new `WSJT_FORK_TAG` (or
+`VERSION_Z`) in the commit that should ship, push it to master, and a green CI
+publishes it: `auto-release.yml` waits for CI, checks whether that version is
+already tagged, and dispatches `release.yml` when it is not. Push anything
+without a bump and it is a no-op, because the version is already released.
+Nothing decides when to release except the release commit.
+
+To release without waiting for CI, or to re-run one by hand:
+
 ```sh
 gh workflow run release.yml --repo uaro-radio/wsjt-z --ref master
 ```
+
+**CI runs on master.** It used to name `feat/uaham-integration`, the
+integration branch, which has been merged since — so it fired for nobody. Auto
+release depends on it firing.
 
 **Do not tag by hand.** The tag is what a green build earns, not what starts
 one: the workflow builds all five installers first and only then creates
