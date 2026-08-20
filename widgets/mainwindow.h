@@ -389,7 +389,7 @@ private slots:
     void on_pb_BandChangeNow_clicked();
      void on_cbAutoCall_toggled(bool b);
      void on_cbAutoCQ_toggled(bool b);
-     bool callsignFiltered(DecodedText dt, bool allowQsoPartnerBypass = true);
+     bool callsignFiltered(DecodedText dt, bool probeOnly = false);
      bool isAutomaticQsoAllowed(DecodedText const&);
 
      // UaHamAward

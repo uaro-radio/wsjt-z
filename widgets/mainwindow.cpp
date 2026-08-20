@@ -6130,16 +6130,14 @@ void MainWindow::readFromStdout()                             //readFromStdout
       if(m_mode!="FT8" or (SpecOp::HOUND != m_specOp) or (SpecOp::HOUND == m_specOp and sfox)) {
         if(m_mode=="FT8" or m_mode=="FT4" or m_mode=="FT2" or m_mode=="Q65"
            or m_mode=="JT4" or m_mode=="JT65" or m_mode=="JT9" or m_mode=="FST4") {
-            if (m_zdebug) {
-              log(QString("Preventing HoundFrom Spotting Attempt. decodedtext=%1").arg(decodedtext.string()));
-            }
-            if (isAutomaticQsoAllowed(decodedtext)) {
-              auto_sequence (decodedtext, 25, 50);
-            } else {
-              if (m_zdebug) {
-                log("AutoQSO Policy: auto_sequence skipped");
-              }
-            }
+          // Z: decodedtext0 here, not decodedtext — the filter verdict above was
+          // taken from it, and decodedtext has "TU; " stripped, so a contest
+          // message would otherwise be judged twice on two different strings.
+          if (isAutomaticQsoAllowed (decodedtext0)) {
+            auto_sequence (decodedtext, 25, 50);
+          } else if (m_zdebug) {
+            log ("AutoQSO policy: auto_sequence skipped");
+          }
         }
 
 // find and extract any report for myCall, but save in m_rptRcvd only if it's from DXcall
@@ -14227,7 +14225,7 @@ void MainWindow::rebuildFilterCache() const
 static const QRegularExpression kReDigit{"[0-9]"};
 static const QRegularExpression kReCqStart{"^(CQ|CQ\\s\\w+)$"};
 
-bool MainWindow::callsignFiltered(DecodedText dt, bool allowQsoPartnerBypass)
+bool MainWindow::callsignFiltered(DecodedText dt, bool probeOnly)
 {
 
     if (!m_filterCacheValid) rebuildFilterCache();
@@ -14294,18 +14292,20 @@ bool MainWindow::callsignFiltered(DecodedText dt, bool allowQsoPartnerBypass)
                 if (m_zdebug) log("callsignFiltered: TX First Lock. Pounce cancelled.");
                 return false;
               } else {
-                  m_priorityCall = dxCall;
-                  m_prioFreq = dt.frequencyOffset();
-                  m_nextRpt = dt.report();
-                  m_prioTxFirst=(nmod!=0);
-                  m_prioGrid  = dxGrid;
+                  if (!probeOnly) {
+                    m_priorityCall = dxCall;
+                    m_prioFreq = dt.frequencyOffset();
+                    m_nextRpt = dt.report();
+                    m_prioTxFirst=(nmod!=0);
+                    m_prioGrid  = dxGrid;
+                  }
                   if (m_zdebug) log("callsignFiltered: Pounce mode");
                   return false;
               }
           }
      }
 
-    if (allowQsoPartnerBypass && (m_lastCall == dxCall || m_hisCall == dxCall)) {
+    if (!probeOnly && (m_lastCall == dxCall || m_hisCall == dxCall)) {
         if (m_zdebug) {
           log(QString("Current or last QSO partner. dxCall = %1, hisCall = %2, lastCall = %3")
               .arg(dxCall)
@@ -14556,7 +14556,7 @@ bool MainWindow::callsignFiltered(DecodedText dt, bool allowQsoPartnerBypass)
 
 
     // Alerts
-          if ((is_CQ || (ui->cbCQonlyIncl73->isChecked() && is_73)) &&
+          if (!probeOnly && (is_CQ || (ui->cbCQonlyIncl73->isChecked() && is_73)) &&
            (ui->cb_callB4_alert->isChecked() || ui->cb_callB4onBand_alert->isChecked() || ui->cb_countryB4_alert->isChecked() || ui->cb_countryB4onBand_alert->isChecked() ||
                   ui->cb_gridB4_alert->isChecked() || ui->cb_gridB4onBand_alert->isChecked() || ui->cb_continentB4_alert->isChecked() || ui->cb_continentB4onBand_alert->isChecked() ||
                   ui->cb_CQZoneB4_alert->isChecked() || ui->cb_CQZoneB4onBand_alert->isChecked() || ui->cb_ITUZoneB4_alert->isChecked() || ui->cb_ITUZoneB4onBand_alert->isChecked() ||
@@ -14613,6 +14613,12 @@ bool MainWindow::callsignFiltered(DecodedText dt, bool allowQsoPartnerBypass)
           }
 
     if (m_zdebug) log("Call not filtered: " + dxCall);
+
+    // A probe asked for the verdict and nothing else. The alerting above and the
+    // priority-call bookkeeping below belong to the single real pass over this
+    // decode; running them twice duplicates the alert line and re-picks the
+    // priority call from a message that was already counted.
+    if (probeOnly) return false;
 
     if ( !is_CQ && !(ui->cbCQonlyIncl73->isChecked() && is_73) ) {
         if (m_zdebug) log(QString("Not CQ/73. Exiting. is_CQ=%1 is_73=%2 cbCQonlyIncl73=%3")
@@ -14711,38 +14717,44 @@ bool MainWindow::callsignFiltered(DecodedText dt, bool allowQsoPartnerBypass)
     return false;
 }
 
+// Z: may auto_sequence() act on this decode?
+//
+// A station we have just worked skips callsignFiltered() outright — the
+// m_lastCall / m_hisCall shortcut there keeps the QSO in front of us readable,
+// alertable and un-filtered, which is right while the QSO is running. While we
+// are calling CQ that same shortcut is a hole: the station can come back with a
+// bare report, R-report, RR73 or 73, which carries no grid and trips no other
+// re-check, so isFiltered stays false and auto_sequence() opens an automatic
+// QSO with someone our filters had already rejected.
+//
+// Only that one shortcut is re-examined. Every other way through
+// callsignFiltered() has already decided isFiltered, and the caller's own guard
+// acts on it — a second full pass would just duplicate the work and its side
+// effects. The scope is the same one the guard uses, so "Apply filtering to
+// stations calling us" still means what the setting says it means.
 bool MainWindow::isAutomaticQsoAllowed(DecodedText const& message)
 {
-    // Only apply strict filtering while WSJT-X is in CALLING state.
-    // In all other states, keep the original auto_sequence behaviour.
+    if (m_QSOProgress != CALLING) return true;
+    if (!(ui->cbAutoCQ->isChecked() || ui->cbAutoCall->isChecked())) return true;
+    if (!m_config.autoCQfiltering()) return true;
 
-    bool const isQSOStateCalling = (m_QSOProgress == CALLING);
+    QString deCall;
+    QString deGrid;
+    message.deCallAndGrid(/*out*/ deCall, deGrid);
+    if (m_lastCall != deCall && m_hisCall != deCall) return true;
 
-    if (!isQSOStateCalling) {
-      if (m_zdebug) {
-        log("AutoQSO policy: QSO is not in CALLING state. ALLOW");
-      }
-        return true;
-    }
-
-    bool const isCallSignFiltered = callsignFiltered(message, false);
+    bool const filtered = callsignFiltered(message, /*probeOnly:*/ true);
 
     if (m_zdebug) {
-        QString deCall;
-        QString deGrid;
-        message.deCallAndGrid(deCall, deGrid);
-
-        log(QString(
-            "AutoQSO policy: %1 while CALLING "
-            "call=%2 msg='%3' hisCall=%4 lastCall=%5")
-            .arg(isCallSignFiltered ? "REJECT" : "ALLOW")
+        log(QString("AutoQSO policy: %1 %2 answering our CQ (lastCall=%3 hisCall=%4) msg='%5'")
+            .arg(filtered ? "REJECT" : "ALLOW")
             .arg(deCall)
-            .arg(message.string())
+            .arg(m_lastCall)
             .arg(m_hisCall)
-            .arg(m_lastCall));
+            .arg(message.string()));
     }
 
-    return !isCallSignFiltered;
+    return !filtered;
 }
 
 void MainWindow::on_actionIgnore_station_triggered() {
