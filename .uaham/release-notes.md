@@ -4,11 +4,13 @@
 
 Це **не офіційний реліз WSJT-Z**. Про проблеми саме з тим, що описано нижче, пишіть сюди, а не авторам WSJT-Z чи WSJT-X.
 
-## Що змінилось від `uaham1`
+## Що змінилось від `uaham2`
 
-Нічого з того, що ви побачите під час роботи: **функціонально ця збірка така сама**, і якщо `uaham1` у вас працює, оновлюватись не обов'язково.
+Одне виправлення, і його чути в ефірі. Якщо ви даєте CQ з увімкненою галочкою **«Apply filtering to stations calling us»**, станція, з якою ви щойно провели зв'язок, могла обійти ваші фільтри й затягнути вас у друге автоматичне QSO. Досить було, щоб вона відповіла самим лише рапортом — `-10`, `R-10`, `RR73` чи `73`. У такому пакеті немає локатора, тому жодна з наступних перевірок за нього не бралася, і автопослідовність відповідала так, ніби фільтрів не існує.
 
-Змінилось усередині. Попередня збірка проходила лише тому, що для `map65` і `qmap` — двох успадкованих програм, яких ця збірка не торкається — довелося вимкнути суворий режим компілятора. Тепер там перенесене справжнє виправлення з WSJT-X, а суворий режим повернуто для всього дерева. Дорогою це закрило кілька місць у переліку звукових пристроїв `map65`, де довга назва пристрою писалась у буфер без обмеження довжини.
+Тепер, поки ви кличете CQ, така станція проходить ті самі фільтри, що й будь-яка інша. На зв'язок, який уже почався, це не впливає: доки QSO триває, ваш кореспондент лишається поза фільтрами — інакше ви б втратили другу половину власного зв'язку. Якщо галочку вимкнено, не змінюється нічого: вона й далі означає рівно те, що написано в її підказці.
+
+Знайшов і виправив Дмитро Данилченко ([@ddanilchenko](https://github.com/ddanilchenko)) — [PR #1](https://github.com/uaro-radio/wsjt-z/pull/1). Дякуємо.
 
 ## Що додано
 
@@ -40,11 +42,13 @@ A build of **WSJT-Z** with [uahamaward.com](https://uahamaward.com) integration.
 
 This is **not an official WSJT-Z release**. Report problems with what is described below here, not to the WSJT-Z or WSJT-X authors.
 
-## Changed since `uaham1`
+## Changed since `uaham2`
 
-Nothing you will see while operating: **this build is functionally identical**, and if `uaham1` works for you there is no need to update.
+One fix, and it is audible on the air. When you call CQ with **"Apply filtering to stations calling us"** switched on, a station you had just worked could slip past your filters and pull you into a second automatic QSO. All it took was an answer carrying nothing but a report — `-10`, `R-10`, `RR73` or `73`. Such a message has no grid square, so none of the later checks would look at it, and auto-sequencing replied as though the filters were not there.
 
-What changed is underneath. The previous build only compiled because strict compiler checks had been switched off for `map65` and `qmap` — two inherited applications this build does not touch. They now carry the real fix from upstream WSJT-X, and strict checking is back across the whole tree. On the way it closed several places in `map65`'s sound-device listing where a long device name was written into a buffer without a length limit.
+While you are calling CQ that station now goes through the same filters as anyone else. A QSO already under way is untouched: for as long as it runs your correspondent stays exempt from filtering, or you would lose the second half of your own contact. With the setting off nothing changes at all — it still means exactly what its tooltip says.
+
+Found and fixed by Dmitry Danilchenko ([@ddanilchenko](https://github.com/ddanilchenko)) in [PR #1](https://github.com/uaro-radio/wsjt-z/pull/1). Thank you.
 
 ## What was added
 

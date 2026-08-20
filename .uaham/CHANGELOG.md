@@ -9,6 +9,51 @@ than the obvious alternative.
 
 ---
 
+## 3.0.0-2.0.18-uaham3 — 2026-08-20
+
+### Auto-sequencing answered a filtered station it had just worked
+
+From ddanilchenko in PR #1, then narrowed. `callsignFiltered()` lets the
+current or last QSO partner through untouched — the `m_lastCall` /
+`m_hisCall` shortcut near the top. That is right while a QSO is running: the
+partner has to stay visible, alertable and un-filtered or the operator loses
+the second half of their own contact. While calling CQ it is a hole. The same
+station can come back with nothing but a report, `R-report`, `RR73` or `73`,
+which carries no grid and so trips no other re-check; `isFiltered` stays false
+and `auto_sequence()` opens a second automatic QSO with someone the filters
+had already rejected.
+
+The obvious fix — re-run `callsignFiltered()` before every `auto_sequence()`
+call while CALLING — is what the PR did, and it is too broad, because that
+function is not a predicate. It appends to the alert pane outside the
+`!m_beeped` guard, so an alert-worthy CQ got listed twice; it re-picks
+`m_priorityCall`; and it repeats two logbook matches, a LOTW lookup and the
+prefix and continent loops on every decode of a busy band.
+
+So `isAutomaticQsoAllowed()` asks the narrow question instead: only the
+QSO-partner shortcut can produce a false "not filtered" here, every other path
+already set `isFiltered` and the caller's guard acts on it, so only that case
+is re-examined. The re-check is a probe — `callsignFiltered(dt, probeOnly)`
+skips the shortcut *and* the side effects and stops at the verdict. Anything
+that adds side effects to that function must guard them the same way.
+
+The check honours `cb_autoCQfiltering` ("Apply filtering to stations calling
+us") and the auto-CQ / auto-call boxes, the same scope as the `isFiltered`
+guard it sits beside. A version that ignored them would silently override
+operators who had turned the setting off, and that checkbox's tooltip
+describes this exact behaviour.
+
+## 3.0.0-2.0.18-uaham2 — 2026-08-14
+
+Functionally identical to `uaham1`. `map65` and `qmap` had been building with
+`-Werror` switched off, which was a way of not fixing a warning rather than a
+fix; upstream WSJT-X had repaired the real cause in `2e3b066b0` (four dead
+audio counters). Ported here and `-Werror` restored across the tree. The port
+had to be applied as byte replacements: WSJT-Z's `map65` sources are still
+CRLF and upstream converted them to LF, so every hunk failed on line endings
+alone. It also replaced `sprintf` with `snprintf` in the touched code, closing
+several unbounded writes into fixed buffers in the sound-device listing.
+
 ## 3.0.0-2.0.18-uaham1 — 2026-08-14
 
 First release. Five installers: Windows, and Linux x86_64/aarch64 as `.deb`

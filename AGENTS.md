@@ -177,6 +177,24 @@ searching the binary for Ukrainian text proves nothing past about 23 kB — no
 language is visible that way. Use `lconvert -i build/linux/wsjtx_uk.qm -o
 /tmp/back.ts` instead.
 
+**`WSJT_FORK_TAG` is a CMake cache variable, so editing `CMakeLists.txt` does
+not move it.** `.uaham/docker/build.sh` configures only when `CMakeCache.txt` is
+absent, which means a local build keeps reporting whatever marker the very first
+configure wrote — a binary claiming `uaham1` long after the source says
+otherwise. Releases are unaffected: CI configures from a clean checkout. To
+check a local build, ask the binary rather than the source:
+
+```sh
+strings build/linux/wsjtx | grep -m1 -- -uaham
+```
+
+and if it disagrees, re-point the cache without a full rebuild:
+
+```sh
+docker run --rm -v "$PWD:/src" -u "$(id -u):$(id -g)" -e HOME=/tmp -w /src \
+  uaham/wsjtx-build cmake -S /src -B /src/build/linux -DWSJT_FORK_TAG=uahamN
+```
+
 **cty.dat entity ids are line numbers** and are renumbered by every update, so
 settings store the primary prefix (`UR`, `JA`, `K`), never the id.
 
