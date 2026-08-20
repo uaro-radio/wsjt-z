@@ -105,15 +105,24 @@ after that incremental builds are seconds. Output in `build/linux/`.
 ## Releasing
 
 ```sh
-git tag build/v3.0.0-2.0.18-uaham1
-git push origin build/v3.0.0-2.0.18-uaham1
+gh workflow run release.yml --repo uaro-radio/wsjt-z --ref master
 ```
+
+**Do not tag by hand.** The tag is what a green build earns, not what starts
+one: the workflow builds all five installers first and only then creates
+`build/v<version>` on the commit it built, and publishes. A run that fails half
+way leaves no tag to clean up and no version number burned on a build nobody
+can download. Add `-f dry_run=true` to build everything and stop just before
+the tag.
 
 The version has **three parts**: the WSJT-X base (`Versions.cmake`), WSJT-Z's
 own mod version (`VERSION_Z` in `CMakeLists.txt`), and the fork marker
-(`WSJT_FORK_TAG`). The release job refuses a tag that disagrees with any of
-them — a file whose name promises one version while its binary reports another
-is the kind of thing nobody notices until they are debugging something else.
+(`WSJT_FORK_TAG`). It is read from those files, never typed — a file whose name
+promises one version while its binary reports another is the kind of thing
+nobody notices until they are debugging something else. **Bump
+`WSJT_FORK_TAG` and commit it before dispatching**; the run refuses a version
+that is already tagged, and refuses release notes that are missing or have no
+`# English` section, both before any build starts.
 
 Nothing is published unless every platform produced an installer. The
 description comes from `.uaham/release-notes.md`; edit that, not the workflow.
@@ -126,10 +135,10 @@ release page that explains a country filter in one language and waves at it in
 the other gets misunderstood in exactly the half nobody checks. A section added
 to one language and not the other is a review comment.
 
-Notes are baked in at tag time: the release job checks out the tag, so editing
-`release-notes.md` afterwards changes nothing on the page. Fix a published
-release with `gh release edit <tag> --notes-file .uaham/release-notes.md`
-**and** commit the file, or the next release repeats the omission.
+Notes are read from the commit being released, so editing `release-notes.md`
+afterwards changes nothing on the page. Fix a published release with
+`gh release edit <tag> --notes-file .uaham/release-notes.md` **and** commit the
+file, or the next release repeats the omission.
 
 ---
 

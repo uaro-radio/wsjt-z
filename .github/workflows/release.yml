@@ -1,12 +1,18 @@
 name: Release
 
-# Pushing a tag is the whole release procedure:
+# The whole release procedure is one manual run of this workflow:
 #
-#     git tag build/v3.0.0-2.0.18-uaham1
-#     git push origin build/v3.0.0-2.0.18-uaham1
+#     gh workflow run release.yml --repo uaro-radio/wsjt-z --ref master
 #
-# The tag names the artifacts, so it has to agree with what the source says
-# about itself; the prepare job below refuses the tag if it does not.
+# The tag is what a green build earns, not what starts one. Nothing is tagged
+# and nothing is published until all five installers exist, so a release that
+# fails half way leaves no tag behind to clean up and no version number burned
+# on a build nobody can download.
+#
+# The version is never typed by hand. It is read from the source at the commit
+# being released — Versions.cmake for the WSJT-X base, VERSION_Z and
+# WSJT_FORK_TAG from CMakeLists.txt — which removes the whole class of mistake
+# where a tag promises one version and the binary inside reports another.
 #
 # WSJT-Z's own naming is <WSJT-X base>-<mod version>, as in
 # wsjtz-3.0.0-2.0.18-win64.exe. This fork appends its marker to that, so the
@@ -14,41 +20,75 @@ name: Release
 # WSJT-Z, and the marker says whose build it is.
 
 on:
-  push:
-    tags: ["build/v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build everything, but do not tag and do not publish"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
 
 jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
     steps:
       - uses: actions/checkout@v6
-      - id: v
-        run: |
-          TAG_VERSION="${GITHUB_REF_NAME#build/v}"
 
+      - id: v
+        name: Read the version out of the source
+        run: |
           MAJOR=$(sed -nE 's/^[[:space:]]*set \(WSJTX_VERSION_MAJOR ([0-9]+)\).*/\1/p' Versions.cmake)
           MINOR=$(sed -nE 's/^[[:space:]]*set \(WSJTX_VERSION_MINOR ([0-9]+)\).*/\1/p' Versions.cmake)
           PATCH=$(sed -nE 's/^[[:space:]]*set \(WSJTX_VERSION_PATCH ([0-9]+)\).*/\1/p' Versions.cmake)
           VERSION_Z=$(sed -nE 's/^[[:space:]]*set \(VERSION_Z "([^"]*)".*/\1/p' CMakeLists.txt | head -1)
           FORK_TAG=$(sed -nE 's/^[[:space:]]*set \(WSJT_FORK_TAG "([^"]*)".*/\1/p' CMakeLists.txt | head -1)
 
-          EXPECTED="${MAJOR}.${MINOR}.${PATCH}"
-          [ -n "$VERSION_Z" ] && EXPECTED="${EXPECTED}-${VERSION_Z}"
-          [ -n "$FORK_TAG" ] && EXPECTED="${EXPECTED}-${FORK_TAG}"
-
-          echo "tag says:    $TAG_VERSION"
-          echo "source says: $EXPECTED"
-          # Letting these disagree ships a file whose name promises one version
-          # and whose binary reports another, which is the kind of thing nobody
-          # notices until they are debugging something else entirely.
-          if [ "$TAG_VERSION" != "$EXPECTED" ]; then
-            echo "::error::Tag version ($TAG_VERSION) does not match the source ($EXPECTED)."
-            echo "::error::Bump Versions.cmake, VERSION_Z or WSJT_FORK_TAG, or retag."
+          if [ -z "$MAJOR" ] || [ -z "$MINOR" ] || [ -z "$PATCH" ]; then
+            echo "::error::Could not read the WSJT-X version out of Versions.cmake."
             exit 1
           fi
-          echo "version=$EXPECTED" >> "$GITHUB_OUTPUT"
+
+          VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          [ -n "$VERSION_Z" ] && VERSION="${VERSION}-${VERSION_Z}"
+          [ -n "$FORK_TAG" ] && VERSION="${VERSION}-${FORK_TAG}"
+
+          echo "version: $VERSION"
+          echo "commit:  $GITHUB_SHA"
+          {
+            echo "version=$VERSION"
+            echo "tag=build/v$VERSION"
+          } >> "$GITHUB_OUTPUT"
+
+      # Fail here rather than after thirty minutes of builds. A marker that was
+      # already released means the release commit forgot to bump WSJT_FORK_TAG,
+      # and finishing the run would either clobber a published release or die
+      # at the last step with every installer already paid for.
+      - name: Refuse a version that is already released
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.v.outputs.tag }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::$TAG already exists. Bump WSJT_FORK_TAG (or VERSION_Z) and commit that first."
+            exit 1
+          fi
+          echo "  ok  $TAG is free"
+
+      # The release page is written before the release, not after: the notes are
+      # read from the commit being built, so editing them later changes nothing
+      # that anyone downloading this version will see.
+      - name: Verify the release notes exist in both languages
+        run: |
+          NOTES=.uaham/release-notes.md
+          [ -f "$NOTES" ] || { echo "::error::$NOTES is missing — write it before releasing."; exit 1; }
+          grep -q '^# English' "$NOTES" \
+            || { echo "::error::$NOTES has no '# English' section. Release notes are written in both languages, in full — see AGENTS.md."; exit 1; }
+          echo "  ok  $NOTES, $(wc -l < "$NOTES") lines, both languages present"
 
   windows:
     needs: prepare
@@ -120,10 +160,32 @@ jobs:
           done
           [ "$missing" -eq 0 ] || { echo "::error::Refusing to publish a partial release."; exit 1; }
 
+      - name: Dry run — stopping before the tag
+        if: inputs.dry_run
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: echo "::notice::Every installer built. A real run would now tag $TAG at $GITHUB_SHA and publish."
+
+      # Only now, with five installers in hand, does the version become a tag.
+      # It points at the commit the artifacts were built from, which is the one
+      # this run checked out — not whatever master has drifted to since.
+      - name: Tag the commit that built
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f ref="refs/tags/${TAG}" \
+            -f sha="${GITHUB_SHA}" > /dev/null
+          echo "  ok  ${TAG} -> ${GITHUB_SHA}"
+
       - name: Create GitHub Release
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.prepare.outputs.version }}
+          TAG: ${{ needs.prepare.outputs.tag }}
         run: |
           # Only the installers, by name. Selecting on extension alone would
           # also sweep in every utility binary built alongside the program.
@@ -143,15 +205,9 @@ jobs:
           # project — and nothing at all for the operator who arrived here to
           # download a program. The text lives in the repository so it can be
           # edited without touching this workflow.
-          NOTES=$(mktemp)
-          if [ -f .uaham/release-notes.md ]; then
-            cat .uaham/release-notes.md > "$NOTES"
-          else
-            echo "::warning::.uaham/release-notes.md is missing — publishing with generated notes only"
-          fi
-
-          gh release create "${GITHUB_REF_NAME}" \
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
             --title "WSJT-Z ${VERSION} (UaHamAward)" \
-            --notes-file "$NOTES" \
+            --notes-file .uaham/release-notes.md \
             --generate-notes \
             "${files[@]}"
